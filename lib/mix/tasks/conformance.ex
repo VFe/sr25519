@@ -8,7 +8,8 @@ defmodule Mix.Tasks.Conformance do
       mix conformance            # full ladder incl. the p99 benchmark
       mix conformance --seed 0   # extra args are forwarded to `mix test`
 
-  The rungs (see the library plan §8.5):
+  This task is development tooling for this repository only — it is deliberately
+  excluded from the Hex package. The rungs:
 
     * L0 build & load        * L4 Substrate convention
     * L1 crate conformance   * L5 independent oracle (@scure) + cross-oracle agreement

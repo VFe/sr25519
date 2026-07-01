@@ -9,6 +9,8 @@ as potentially breaking and versioned deliberately.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-01
+
 ### Added
 - **Verification-only v0.1 core.**
   - `Sr25519.verify_raw/4` — low-level schnorrkel verify over
@@ -23,12 +25,17 @@ as potentially breaking and versioned deliberately.
     vector-backed).
 - Rust NIF over `schnorrkel = "=0.11.5"` with `#![forbid(unsafe_code)]` and
   `panic = "unwind"`.
-- Frozen cross-implementation vector corpus (`substrate-interface`, `@scure/sr25519`,
-  `schnorrkel` crate) and a single-command conformance ladder (`mix conformance`,
-  rungs L0–L7).
+- Frozen cross-implementation vector corpus from four oracles —
+  `substrate-interface` (production Substrate/Bittensor signer),
+  `@polkadot/util-crypto` (the polkadot-js wasm signer + exact `signRaw` flow),
+  `@scure/sr25519` (independent lineage), and the `schnorrkel` crate itself —
+  and a single-command conformance ladder (`mix conformance`, rungs L0–L7).
+- Concurrency and memory-stability tests (parallel verification from 64
+  processes; 20k-call sustained-load memory bound).
 - NIF-safety suite: separate-process deliberate-panic survival test, input fuzzing,
   and a p99 < 1 ms latency gate.
 - Precompiled distribution via `rustler_precompiled` with a `SR25519_FORCE_BUILD`
   source-build escape hatch.
 
-[Unreleased]: https://github.com/vfe/sr25519/commits/main
+[Unreleased]: https://github.com/VFe/sr25519/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/VFe/sr25519/commits/v0.1.0

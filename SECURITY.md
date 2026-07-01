@@ -21,7 +21,7 @@ The most security-relevant areas:
   **caller** responsibility; a confused-deputy bug most often lives there.
 - The NIF boundary: no panic may cross it (`panic = "unwind"`, `#![forbid(unsafe_code)]`).
 
-## Pre-release review gate (M2.5)
+## Pre-release review gate
 
 Before the first published release, an independent human review is required
 (someone comfortable with Rust NIFs and crypto bindings), confirming at least:

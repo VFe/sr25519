@@ -25,8 +25,8 @@
     { "name": "max_bytes", "repeat_hex": "61", "count": 65536, "note": "exactly max_message_bytes bytes of 0x61", "only": { "oracle": "rust", "seed_name": "seed_ones", "convention": "substrate_raw" } }
   ],
   "conventions": [
-    { "name": "substrate_raw", "context": "substrate", "wrapping": "none", "oracles": ["rust", "substrate_interface", "scure"] },
-    { "name": "bytes_xml", "context": "substrate", "wrapping": "bytes_xml", "oracles": ["rust", "substrate_interface", "scure"] },
+    { "name": "substrate_raw", "context": "substrate", "wrapping": "none", "oracles": ["rust", "substrate_interface", "scure", "polkadot_js"] },
+    { "name": "bytes_xml", "context": "substrate", "wrapping": "bytes_xml", "oracles": ["rust", "substrate_interface", "scure", "polkadot_js"] },
     { "name": "raw_context", "context": "sr25519-ex-test-context", "wrapping": "none", "oracles": ["rust"] }
   ]
 }

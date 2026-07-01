@@ -71,7 +71,7 @@ defmodule Sr25519.Substrate do
   Mirrors `u8aWrapBytes` from `@polkadot/util` exactly: the message is wrapped as
   `<Bytes>message</Bytes>` **unless** it is already `<Bytes>…</Bytes>`-wrapped or
   starts with the Ethereum signed-message prefix (`"\\x19Ethereum Signed
-  Message:\\n"`), in which case the signer signed it as-is and so is it verified
+  Message:\\n"`), in which case the signer signed it as-is and so it is verified
   as-is. Pass the message exactly as the dapp passed it to `signRaw`.
 
   Because wrapping adds #{@wrap_overhead} bytes, a message that gets wrapped must

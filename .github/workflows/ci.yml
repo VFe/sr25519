@@ -72,6 +72,10 @@ jobs:
         if: matrix.full
         run: mix conformance
 
+      - name: Dialyzer
+        if: matrix.os == 'ubuntu-latest'
+        run: mix dialyzer --format github
+
       - name: Tests (portable subset)
         if: ${{ !matrix.full }}
         run: mix test

@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@scure/sr25519": "2.2.0",
-    "@polkadot/util": "14.0.3"
+    "@polkadot/util": "14.0.3",
+    "@polkadot/util-crypto": "^14.0.3",
+    "@scure/sr25519": "2.2.0"
   }
 }

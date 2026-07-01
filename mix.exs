@@ -13,6 +13,9 @@ defmodule Sr25519.MixProject do
       description: description(),
       package: package(),
       deps: deps(),
+      # :mix must be in the PLT because lib/mix/tasks/conformance.ex (dev-only,
+      # not shipped) implements a Mix.Task.
+      dialyzer: [plt_add_apps: [:mix]],
       docs: docs(),
       name: "sr25519",
       source_url: @source_url
@@ -20,7 +23,8 @@ defmodule Sr25519.MixProject do
   end
 
   def application do
-    [extra_applications: [:logger]]
+    # Pure library: no supervision tree, no logging, no extra OTP apps.
+    []
   end
 
   # `mix conformance` needs the test env (ExUnit + vectors); `mix docs` and the
@@ -46,9 +50,10 @@ defmodule Sr25519.MixProject do
       {:rustler, "~> 0.38", optional: true},
       {:stream_data, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.3", only: [:dev, :test]},
-      # jason is used by the conformance report + vector loader; rustler also
-      # depends on it (unrestricted), so it can't carry an :only restriction.
-      {:jason, "~> 1.4"},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
+      # NOTE: no direct jason dep — the conformance report + vector loader use
+      # Jason, which arrives transitively via rustler; declaring it here would
+      # make it a hard runtime dep of every consumer for nothing.
       # Docs-only; isolated in its own env so `mix compile`/`mix test` never pull
       # ex_doc's leex/yecc-heavy tree. Build docs with `MIX_ENV=docs mix docs`.
       {:ex_doc, "~> 0.34", only: :docs, runtime: false}
@@ -60,8 +65,11 @@ defmodule Sr25519.MixProject do
       licenses: ["MIT", "Apache-2.0"],
       # MANDATORY for a precompiled Hex package: the checksum file + the native
       # sources + the exact Cargo.lock (so force-build users get the identical tree).
+      # lib/mix (the dev-only `mix conformance` task) deliberately does NOT ship:
+      # it would inject a broken, generically-named task into every consumer app.
       files: [
-        "lib",
+        "lib/sr25519.ex",
+        "lib/sr25519",
         "native/sr25519_nif/src",
         "native/sr25519_nif/Cargo.toml",
         "native/sr25519_nif/Cargo.lock",

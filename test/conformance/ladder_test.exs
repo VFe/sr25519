@@ -72,6 +72,16 @@ defmodule Sr25519.Conformance.L4Test do
     end
   end
 
+  # polkadot-js is where most real-world signatures come from: the wasm-crypto
+  # signer plus the exact u8aWrapBytes signRaw flow.
+  for v <- Sr25519.Vectors.by_tool("polkadot_js") do
+    @tag rung: :L4
+    test "polkadot-js: #{v["name"]}" do
+      vector = unquote(Macro.escape(v))
+      assert Sr25519.Vectors.run(vector) == {:ok, vector["expected"]}
+    end
+  end
+
   # u8aWrapBytes is CONDITIONAL: an already-<Bytes>-wrapped or Ethereum-prefixed
   # message is signed as-is by polkadot-js signRaw. verify_wrapped_bytes/3 must
   # mirror that passthrough, so for these corpus messages (signed raw by the

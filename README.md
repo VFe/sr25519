@@ -47,7 +47,42 @@ def deps do
 end
 ```
 
-Then set `SR25519_FORCE_BUILD=1` for the compile.
+Then set `SR25519_FORCE_BUILD=1` for the compile (or use
+`config :rustler_precompiled, :force_build, sr25519: true` in your config).
+
+### Prove the install works (30 seconds)
+
+Paste this into `iex -S mix` — it verifies a frozen known-answer vector from the
+independent `@scure/sr25519` oracle (committed in this repo's vector corpus):
+
+```elixir
+msg = "sr25519 known-answer anchor"
+
+sig =
+  Base.decode16!(
+    "9a0d379ebe5a8158576e7064c01adcaf80f76cf26f4c74b10ee25fffe79bf657" <>
+      "91e1e9cf7b46ee152ca95bafde4c2d4a3128d67ad7738b40d21a098d09e5b88d",
+    case: :lower
+  )
+
+pk = Base.decode16!("189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056", case: :lower)
+
+{:ok, true} = Sr25519.Substrate.verify_raw_message(msg, sig, pk)
+{:ok, false} = Sr25519.Substrate.verify_raw_message("tampered" <> msg, sig, pk)
+```
+
+### Supported platforms
+
+Precompiled artifacts (NIF version 2.15, so OTP ≥ 24; the package requires
+Elixir ~> 1.15) ship for:
+
+| Linux | macOS | Windows |
+| --- | --- | --- |
+| x86_64 gnu + musl | x86_64 | x86_64 msvc + gnu |
+| aarch64 gnu + musl | aarch64 (Apple Silicon) | |
+| arm gnueabihf, riscv64gc | | |
+
+Anything else (FreeBSD, other archs) works via the force-build path above.
 
 ## Usage
 
@@ -70,7 +105,38 @@ Sr25519.Substrate.verify_wrapped_bytes(message, signature, public_key)
 Sr25519.verify_raw(message, signature, public_key, "substrate")
 ```
 
-### Bittensor / Epistula
+### Interop cheat-sheet
+
+The library takes **raw bytes only** — here is how the common encodings map to them:
+
+| You have | You need | How |
+| --- | --- | --- |
+| `0x`-prefixed hex signature (polkadot-js `signRaw` result) | 64-byte binary | strip `"0x"`, `Base.decode16!(hex, case: :mixed)` |
+| 65-byte `MultiSignature` blob (`0x01` ‖ sig) | 64-byte binary | `<<0x01, signature::binary-size(64)>> = blob` |
+| SS58 address (e.g. `5FHneW…`) | 32-byte public key | decode on the signer side (`decodeAddress` in polkadot-js, `Keypair.public_key` in substrate-interface) or use any Base58 lib: SS58 = prefix ‖ pubkey ‖ checksum. This library deliberately ships no codec. |
+
+#### polkadot-js dapp (`signRaw`)
+
+```js
+// browser side
+const { signature } = await signer.signRaw({ address, data: stringToHex(message), type: 'bytes' });
+// send `signature` (0x-hex) and the address's raw public key (decodeAddress(address)) to your API
+```
+
+```elixir
+# BEAM side — signRaw wraps in <Bytes>…</Bytes>; this mirrors it exactly
+sig = Base.decode16!(String.trim_leading(signature_hex, "0x"), case: :mixed)
+Sr25519.Substrate.verify_wrapped_bytes(message, sig, public_key)
+```
+
+#### substrate-interface / subkey (`sign` over bytes)
+
+```elixir
+# Keypair.sign(data) signs the bytes as-is under the "substrate" context
+Sr25519.Substrate.verify_raw_message(message, signature, public_key)
+```
+
+#### Bittensor / Epistula
 
 Bittensor hotkey signing uses the raw `"substrate"` context with **no** wrapping.
 Construct the exact Epistula payload string on your side and verify it:
@@ -79,6 +145,14 @@ Construct the exact Epistula payload string on your side and verify it:
 payload = "#{body}.#{uuid}.#{timestamp}.#{signed_for}"
 Sr25519.Substrate.verify_raw_message(payload, signature, hotkey_public_key)
 ```
+
+#### Pitfall: extrinsic (transaction) signatures
+
+Substrate signs the SCALE-encoded `ExtrinsicPayload`, and when that payload
+exceeds **256 bytes** the signature is over its **blake2_256 hash**, not the
+payload itself. If you verify transaction signatures, reproduce that rule when
+constructing the bytes you pass in — otherwise long extrinsics return
+`{:ok, false}` with no other symptom.
 
 ## Return contract
 
@@ -101,12 +175,14 @@ Correctness is defined by **real-world vectors**, not prose. The vector corpus i
 `test/vectors/` is generated from independent oracles and frozen:
 
 - **`substrate-interface`** (Python) — the real production signer for Substrate/Bittensor.
+- **`@polkadot/util-crypto`** (polkadot-js wasm-crypto + the exact `u8aWrapBytes`
+  `signRaw` flow) — where most real-world dapp signatures come from.
 - **`@scure/sr25519`** (pure-JS noble, independently audited) — the genuinely
   independent oracle that proves the convention is *right*, not merely self-consistent.
 - **the `schnorrkel` crate** (Rust) — confirms the wrapper behaves as the crate it wraps.
 
-All three independently derive the **same keypair** from a shared seed, and both
-`substrate-interface` and `@scure` signatures verify (cross-oracle agreement).
+All four independently derive the **same keypair** from a shared seed, and their
+signatures all verify through this library (cross-oracle agreement).
 
 Safety properties are enforced, not assumed:
 
@@ -129,7 +205,20 @@ mix conformance   # L0–L7 + property & safety suites → conformance_report.js
 treated as breaking and versioned deliberately. See [CHANGELOG.md](CHANGELOG.md) and
 [SECURITY.md](SECURITY.md).
 
+## Troubleshooting
+
+- **`Rustler dependency is needed to force the build`** — you enabled the
+  force-build path without the optional dep; add `{:rustler, "~> 0.38"}` to your
+  own `deps` (Hex does not fetch optional dependencies transitively).
+- **`Error while downloading precompiled NIF … 404`** — the target/NIF-version
+  combination has no published artifact. Either your platform is not in the
+  table above (use `SR25519_FORCE_BUILD=1` with a Rust toolchain), or the
+  version was published without that artifact — please open an issue.
+
 ## License
 
-Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your
-option. Bundles the BSD-3-Clause `schnorrkel` crate — see [NOTICE](NOTICE).
+Dual-licensed under
+[MIT](https://github.com/VFe/sr25519/blob/main/LICENSE-MIT) or
+[Apache-2.0](https://github.com/VFe/sr25519/blob/main/LICENSE-APACHE) at your
+option. Bundles the BSD-3-Clause `schnorrkel` crate — see
+[NOTICE](https://github.com/VFe/sr25519/blob/main/NOTICE).

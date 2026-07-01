@@ -58,5 +58,10 @@ defmodule Sr25519.Conformance.L7Test do
       assert Enum.any?(files, &String.ends_with?(&1, suffix)),
              "package tarball is missing #{suffix}"
     end
+
+    # Dev-only tooling must never ship: the `mix conformance` task would appear
+    # (broken) in every consumer's `mix help`.
+    refute Enum.any?(files, &String.contains?(&1, "lib/mix")),
+           "package tarball must not ship lib/mix (dev-only task leaked)"
   end
 end
