@@ -8,6 +8,7 @@ on:
       - "native/**/deny.toml"
       - ".github/workflows/audit.yml"
   pull_request:
+  workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
 

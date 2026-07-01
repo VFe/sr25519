@@ -2,7 +2,7 @@ defmodule Sr25519.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/vfe/sr25519"
+  @source_url "https://github.com/VFe/sr25519"
 
   def project do
     [
