@@ -1,1 +1,9 @@
-{"name":"sr25519-vectors-node","private":true,"type":"module","dependencies":{"@scure/sr25519":"2.2.0","@scure/base":"^1.1.6"}}
+{
+  "name": "sr25519-vectors-node",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@scure/sr25519": "2.2.0",
+    "@polkadot/util": "14.0.3"
+  }
+}

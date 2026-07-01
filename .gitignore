@@ -27,11 +27,10 @@ erl_crash.dump
 # Conformance harness output
 /conformance_report.json
 
-# The precompiled-artifact checksum file is generated at release time
-# (mix rustler_precompiled.download --all) and committed on the release commit;
-# it is not tracked in ordinary development. The L7 packaging test creates a
-# transient one to validate the tarball shape.
-/checksum-*.exs
+# NOTE: checksum-Elixir.Sr25519.Native.exs is deliberately NOT gitignored — the
+# release flow generates it (mix rustler_precompiled.download --all) and must
+# commit it, and the Hex package is non-functional without it. Between releases
+# it simply doesn't exist (the L7 test creates and removes a transient one).
 
 # OS / editor
 .DS_Store

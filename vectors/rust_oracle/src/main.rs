@@ -166,8 +166,18 @@ fn main() {
     }
 
     // --- Negatives (representative per kind) ---
-    let kp_a = keypair_from_seed(seeds[0]["hex"].as_str().unwrap());
-    let kp_b = keypair_from_seed(seeds[1]["hex"].as_str().unwrap());
+    // Seeds looked up BY NAME (like the sibling generators), never positionally:
+    // reordering the spec's seed list must not silently mislabel negatives.
+    let seed_hex = |name: &str| -> &str {
+        seeds
+            .iter()
+            .find(|s| s["name"] == name)
+            .unwrap_or_else(|| panic!("seed {name} not in spec"))["hex"]
+            .as_str()
+            .unwrap()
+    };
+    let kp_a = keypair_from_seed(seed_hex("seed_ones"));
+    let kp_b = keypair_from_seed(seed_hex("seed_text"));
     let sub_ctx = spec["context"].as_str().unwrap().as_bytes();
     let ascii = message_bytes(messages.iter().find(|m| m["name"] == "ascii").unwrap());
     let good_sig = sign(&kp_a, sub_ctx, &ascii);
@@ -217,6 +227,17 @@ fn main() {
         vec![
             ("convention", json!("raw_context")),
             ("context_hex", json!(hex::encode(b"totally-wrong-context"))),
+        ],
+    );
+    let wrapped_sig = sign(&kp_a, sub_ctx, &apply_wrap(&ascii, "bytes_xml"));
+    neg(
+        "wrong_wrapping",
+        vec![
+            ("signature_hex", json!(hex::encode(wrapped_sig))),
+            (
+                "semantic_message_note",
+                json!("negative: wrapped sig verified as raw"),
+            ),
         ],
     );
 

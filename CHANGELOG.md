@@ -12,10 +12,15 @@ as potentially breaking and versioned deliberately.
 ### Added
 - **Verification-only v0.1 core.**
   - `Sr25519.verify_raw/4` — low-level schnorrkel verify over
-    `(message, signature, public_key, context)`; validates lengths and a
-    `MAX_MESSAGE_BYTES` cap, maps every fallible step to a typed result.
+    `(message, signature, public_key, context)`; validates lengths, a
+    `max_message_bytes/0` cap on the message and a `max_context_bytes/0` cap on
+    the signing context (`{:error, :context_too_large}`), and maps every
+    fallible step to a typed result.
   - `Sr25519.Substrate.verify_raw_message/3` — the `"substrate"` context, no wrapping.
-  - `Sr25519.Substrate.verify_wrapped_bytes/3` — the `<Bytes>…</Bytes>` convention.
+  - `Sr25519.Substrate.verify_wrapped_bytes/3` — the polkadot-js `signRaw`
+    convention, mirroring `u8aWrapBytes` exactly: wraps in `<Bytes>…</Bytes>`
+    unless the message is already wrapped or Ethereum-prefixed (passthrough,
+    vector-backed).
 - Rust NIF over `schnorrkel = "=0.11.5"` with `#![forbid(unsafe_code)]` and
   `panic = "unwind"`.
 - Frozen cross-implementation vector corpus (`substrate-interface`, `@scure/sr25519`,

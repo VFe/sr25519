@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared, frozen spec that every oracle generator (rust_oracle, python/gen.py, node/gen.mjs) reads, so all three sign IDENTICAL (seed, message, convention) tuples. This is what makes cross-oracle agreement (L5) meaningful. MAX_MESSAGE_BYTES = 65536 must match native/sr25519_nif/src/lib.rs and Sr25519.max_message_bytes/0.",
+  "_comment": "Shared, frozen spec that every oracle generator (rust_oracle, python/gen.py, node/gen.mjs) reads, so all three sign IDENTICAL (seed, message, convention) tuples. This is what makes cross-oracle agreement (L5) meaningful. max_message_bytes must match native/sr25519_nif/src/lib.rs and Sr25519.max_message_bytes/0 (asserted by an L3 test). A message's optional \"only\" field pins it to a single oracle/seed/convention cell (any subset of those keys).",
   "max_message_bytes": 65536,
   "context": "substrate",
   "custom_context": "sr25519-ex-test-context",
@@ -16,15 +16,17 @@
   "messages": [
     { "name": "empty", "utf8": "", "note": "empty message" },
     { "name": "ascii", "utf8": "hello world", "note": "short ASCII text" },
-    { "name": "utf8", "utf8": "hEllo wOrld — snowman u2603 and japanese", "note": "UTF-8 multibyte text" },
+    { "name": "utf8", "hex": "68c3a96c6c6f2077c3b6726c6420e2988320e697a5e69cace8aa9e20f09d849e", "note": "UTF-8 multibyte text: 'héllo wörld ☃ 日本語 𝄞' (2-4 byte sequences incl. astral plane)" },
     { "name": "raw_binary", "hex": "00010203fffe807f80ff00", "note": "raw bytes including NUL and high bytes" },
     { "name": "hex_looking", "utf8": "deadbeefcafebabe0123456789abcdef", "note": "ASCII that looks like hex (must be treated as literal bytes, never decoded)" },
     { "name": "realistic_payload", "utf8": "{\"netuid\":1,\"nonce\":42,\"data\":\"stake\"}.7e1c0c2a-0b3e-4a1f-9c2d-0e1f2a3b4c5d.1782900000.5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty", "note": "Epistula-style Bittensor payload body.uuid.timestamp.signed_for" },
-    { "name": "max_bytes", "repeat_hex": "61", "count": 65536, "note": "exactly MAX_MESSAGE_BYTES bytes of 0x61", "only": { "oracle": "rust", "seed_name": "seed_ones", "convention": "substrate_raw" } }
+    { "name": "prewrapped", "utf8": "<Bytes>pre-wrapped payload</Bytes>", "note": "already <Bytes>-wrapped: polkadot-js u8aWrapBytes signs this AS-IS (passthrough), so it is signed under substrate_raw and verify_wrapped_bytes must not re-wrap it", "only": { "convention": "substrate_raw" } },
+    { "name": "eth_prefixed", "hex": "19457468657265756d205369676e6564204d6573736167653a0a68656c6c6f2073723235353139", "note": "Ethereum signed-message prefix + 'hello sr25519': u8aWrapBytes passthrough case two", "only": { "convention": "substrate_raw" } },
+    { "name": "max_bytes", "repeat_hex": "61", "count": 65536, "note": "exactly max_message_bytes bytes of 0x61", "only": { "oracle": "rust", "seed_name": "seed_ones", "convention": "substrate_raw" } }
   ],
   "conventions": [
     { "name": "substrate_raw", "context": "substrate", "wrapping": "none", "oracles": ["rust", "substrate_interface", "scure"] },
-    { "name": "bytes_xml", "context": "substrate", "wrapping": "bytes_xml", "oracles": ["rust", "substrate_interface", "scure"], "skip_messages": ["max_bytes"] },
+    { "name": "bytes_xml", "context": "substrate", "wrapping": "bytes_xml", "oracles": ["rust", "substrate_interface", "scure"] },
     { "name": "raw_context", "context": "sr25519-ex-test-context", "wrapping": "none", "oracles": ["rust"] }
   ]
 }

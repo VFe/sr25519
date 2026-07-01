@@ -7,8 +7,15 @@
 // message directly. Signing is made deterministic by passing a fixed `random`,
 // so the emitted corpus is byte-reproducible.
 //
+// The <Bytes> wrapping comes from @polkadot/util's u8aWrapBytes — the actual
+// production function behind polkadot-js signRaw — so at least one oracle
+// derives the wrapping from the real implementation rather than a local
+// restatement (a consistent transcription error across hand-typed copies would
+// otherwise pass every rung and only fail against production signatures).
+//
 // Usage: node vectors/node/gen.mjs  (writes test/vectors/scure.json)
 import * as scure from '@scure/sr25519';
+import { u8aWrapBytes } from '@polkadot/util';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -22,19 +29,16 @@ const pkgVersion = JSON.parse(
 
 const enc = new TextEncoder();
 const toHex = (u) => Buffer.from(u).toString('hex');
-const fromHex = (h) => Uint8Array.from(Buffer.from(h, 'hex'));
-const WRAP_PREFIX = enc.encode('<Bytes>');
-const WRAP_SUFFIX = enc.encode('</Bytes>');
+// Strict hex decode: Buffer.from(h, 'hex') silently truncates at the first
+// invalid character, which would make this oracle sign the wrong bytes while
+// looking plausible — validate first.
+function fromHex(h) {
+  if (!/^([0-9a-f]{2})*$/.test(h)) throw new Error('invalid hex in spec: ' + JSON.stringify(h));
+  return Uint8Array.from(Buffer.from(h, 'hex'));
+}
 const FIXED_RANDOM = new Uint8Array(32); // deterministic signatures
 const GEN_CMD = 'node vectors/node/gen.mjs';
 
-function concat(...arrs) {
-  const len = arrs.reduce((n, a) => n + a.length, 0);
-  const out = new Uint8Array(len);
-  let o = 0;
-  for (const a of arrs) { out.set(a, o); o += a.length; }
-  return out;
-}
 function messageBytes(m) {
   if (m.utf8 !== undefined) return enc.encode(m.utf8);
   if (m.hex !== undefined) return fromHex(m.hex);
@@ -43,7 +47,8 @@ function messageBytes(m) {
 }
 function applyWrap(bytes, wrapping) {
   if (wrapping === 'none') return bytes;
-  if (wrapping === 'bytes_xml') return concat(WRAP_PREFIX, bytes, WRAP_SUFFIX);
+  // The real polkadot-js signRaw wrapping (conditional passthrough included).
+  if (wrapping === 'bytes_xml') return u8aWrapBytes(bytes);
   throw new Error('unknown wrapping ' + wrapping);
 }
 // A message may pin itself to a single (oracle, seed, convention) cell — e.g. the

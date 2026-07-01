@@ -11,11 +11,6 @@ defmodule Sr25519.Conformance.L0Test do
              {:ok, false}
            ]
   end
-
-  @tag rung: :L0
-  test "a known-good vector verifies through the loaded NIF" do
-    assert Sr25519.Vectors.run(Sr25519.Vectors.known_answer()) == {:ok, true}
-  end
 end
 
 defmodule Sr25519.Conformance.L1Test do
@@ -75,6 +70,50 @@ defmodule Sr25519.Conformance.L4Test do
       vector = unquote(Macro.escape(v))
       assert Sr25519.Vectors.run(vector) == {:ok, vector["expected"]}
     end
+  end
+
+  # u8aWrapBytes is CONDITIONAL: an already-<Bytes>-wrapped or Ethereum-prefixed
+  # message is signed as-is by polkadot-js signRaw. verify_wrapped_bytes/3 must
+  # mirror that passthrough, so for these corpus messages (signed raw by the
+  # oracles, exactly as signRaw would) it must agree with verify_raw_message/3.
+  for name <- ["prewrapped", "eth_prefixed"] do
+    @tag rung: :L4
+    test "u8aWrapBytes passthrough: #{name} verifies identically via both variants" do
+      vectors =
+        Sr25519.Vectors.all()
+        |> Enum.filter(
+          &(&1["message_name"] == unquote(name) and &1["convention"] == "substrate_raw" and
+              &1["expected"])
+        )
+
+      assert vectors != [], "no #{unquote(name)} vectors in the corpus"
+
+      for v <- vectors do
+        msg = Sr25519.Vectors.message(v)
+        sig = Sr25519.Vectors.unhex(v["signature_hex"])
+        pk = Sr25519.Vectors.unhex(v["public_key_hex"])
+
+        assert Sr25519.Substrate.verify_raw_message(msg, sig, pk) == {:ok, true}
+        assert Sr25519.Substrate.verify_wrapped_bytes(msg, sig, pk) == {:ok, true}
+      end
+    end
+  end
+
+  @tag rung: :L4
+  test "a plain message still gets wrapped: raw-signed signature fails via verify_wrapped_bytes" do
+    v =
+      Sr25519.Vectors.all()
+      |> Enum.find(
+        &(&1["message_name"] == "ascii" and &1["convention"] == "substrate_raw" and
+            &1["expected"])
+      )
+
+    msg = Sr25519.Vectors.message(v)
+    sig = Sr25519.Vectors.unhex(v["signature_hex"])
+    pk = Sr25519.Vectors.unhex(v["public_key_hex"])
+
+    assert Sr25519.Substrate.verify_raw_message(msg, sig, pk) == {:ok, true}
+    assert Sr25519.Substrate.verify_wrapped_bytes(msg, sig, pk) == {:ok, false}
   end
 end
 

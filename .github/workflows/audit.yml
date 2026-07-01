@@ -30,5 +30,3 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           manifest-path: native/sr25519_nif/Cargo.toml
-          command: check
-          arguments: --all-features

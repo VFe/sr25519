@@ -21,7 +21,7 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "28bc2cd83fd8b386c6db97852b785cdb4319e77000b86b7ccd046ad2c2296007a229fe3815e7ebea7fe80e4ffc4e204df4f7f16d58bb13c9b84f11f361d13782",
+      "signature_hex": "b403ff125ca6a2d5c9e0dc4e7822f85779af0d3ec9d9794ce52b5c740dbac02d0bd0735f8d812c0f2741b40a96f3cf977c9436165ccb963b30e481500ef47f8e",
       "expected": true
     },
     {
@@ -39,7 +39,7 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "4ad445a44a47c997ec14e1c8af7907c546bbfb8632f5a541fb5d48fbba5e6208e560d79f764e322c5ee20adf52fd7770f8ed4aa79ddaee4ee0dd338b58c8a78f",
+      "signature_hex": "30c350c8f64982f430da6874d39983f4065a48d21cda171ff7f7c52c2ede0e5c751eae520a9c2b284d88da5b057b921f02410720380934f98d494785f23b6383",
       "expected": true
     },
     {
@@ -51,13 +51,13 @@
       "seed_name": "seed_ones",
       "seed_hex": "0101010101010101010101010101010101010101010101010101010101010101",
       "message_name": "utf8",
-      "message_hex": "68456c6c6f20774f726c6420e2809420736e6f776d616e20753236303320616e64206a6170616e657365",
-      "semantic_message_note": "UTF-8 multibyte text",
+      "message_hex": "68c3a96c6c6f2077c3b6726c6420e2988320e697a5e69cace8aa9e20f09d849e",
+      "semantic_message_note": "UTF-8 multibyte text: 'h\u00e9llo w\u00f6rld \u2603 \u65e5\u672c\u8a9e \ud834\udd1e' (2-4 byte sequences incl. astral plane)",
       "context_hex": "737562737472617465",
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "c8389b38add85cbf1498abc2299123047bcdb024bd8323bca3e0450ff988e6534dafa997062b71063e887983b1c65b40d606ce5dae168dc58791ee0afdec808e",
+      "signature_hex": "6207a993a0a8298b812ab7e6a2cb23380a01ebf4269e7f96828a1ec76833cf0a9835f87778ef84df1fd4caa5b452ece797edc37b8ec937900a262a3632f2c386",
       "expected": true
     },
     {
@@ -75,7 +75,7 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "620f292fe2735b3653e5d1bbc5212e202fdb4739df7f9646043cda43f3d38911a15d67b3ce5943e500d35e082be7f9ec966b16a2f565d06d2d6dc1d6dd379287",
+      "signature_hex": "e6f5e90bdcfc1d1e464e5bcacdfc6e64463259e412129ac44fc02e3499277b073c6bc52bc1be8de38c7c67ce124e21f059b3aaaf6e4b2f5ff75c6c63e328dc83",
       "expected": true
     },
     {
@@ -93,7 +93,7 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "848c910e6ee8129fbe05076258aab1c5d118611bb4adff6ab4763da80598271cfd3d634cd7e268ce684d6a3f220893d6cef76d19629aa80f2bf616594d8a4888",
+      "signature_hex": "a453bd0ca175e938d6554d520d46b98766c05d307ce89f44d26f369f19a887392e1c47e0889afa0db170ffa9688280bac28434ca5e1a32e2afcfda8ba37d7d8c",
       "expected": true
     },
     {
@@ -111,7 +111,43 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "c25a34743dbf031e06cf8316aece807ab959fc9a022c33b0f1e679a9ac70b418a1cebd17cc98a83a7c06181e6c9014b14ee034938c36ef053f37e9ec160baa8e",
+      "signature_hex": "6055d39b8d50c2d5442e4546cc4697b98c487a244870565930cf98aa29a0374e4f64a8abb0046108fcc81a3c20e552f9f55836c67a7089c507e263ee6f26308c",
+      "expected": true
+    },
+    {
+      "tool": "substrate_interface",
+      "tool_version": "1.8.1",
+      "generator_command": "vectors/python/.venv/bin/python vectors/python/gen.py",
+      "backend_version": "py-sr25519-bindings 0.2.4",
+      "name": "substrate_interface:seed_ones:prewrapped:substrate_raw",
+      "seed_name": "seed_ones",
+      "seed_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+      "message_name": "prewrapped",
+      "message_hex": "3c42797465733e7072652d77726170706564207061796c6f61643c2f42797465733e",
+      "semantic_message_note": "already <Bytes>-wrapped: polkadot-js u8aWrapBytes signs this AS-IS (passthrough), so it is signed under substrate_raw and verify_wrapped_bytes must not re-wrap it",
+      "context_hex": "737562737472617465",
+      "wrapping": "none",
+      "convention": "substrate_raw",
+      "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+      "signature_hex": "0ee993edd7325abad274af667b2301468c566ed268cffdcbf4c04d3d81353b42d6f56f0a6ebf19c09e9ccce23e95470499493e966a90436a2e1d7aee79791b81",
+      "expected": true
+    },
+    {
+      "tool": "substrate_interface",
+      "tool_version": "1.8.1",
+      "generator_command": "vectors/python/.venv/bin/python vectors/python/gen.py",
+      "backend_version": "py-sr25519-bindings 0.2.4",
+      "name": "substrate_interface:seed_ones:eth_prefixed:substrate_raw",
+      "seed_name": "seed_ones",
+      "seed_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+      "message_name": "eth_prefixed",
+      "message_hex": "19457468657265756d205369676e6564204d6573736167653a0a68656c6c6f2073723235353139",
+      "semantic_message_note": "Ethereum signed-message prefix + 'hello sr25519': u8aWrapBytes passthrough case two",
+      "context_hex": "737562737472617465",
+      "wrapping": "none",
+      "convention": "substrate_raw",
+      "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+      "signature_hex": "e8e8e9435a70459f315c778ffca9bb2b1886e9a792bc94d8512e430c21132821d647e879c6e05b4f2a621bd62726dfddbed6bdf1fe706a87be4840c146bd548c",
       "expected": true
     },
     {
@@ -129,7 +165,7 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "8278e126b30d5e1d2feedab9ec120e5be618d581465cdca19993999146d9093dda7d5df1cd6fccdaff6cb89c3dd740dc056b0732b729ed70da46badf45ad8386",
+      "signature_hex": "cec9275bbbb7a17c77d55582ec9d8510719ab51108e523bf0042ef18c83d98463f8b69cbd8c45dc15ba2eac2a09fc2adb7e54df8e17d2e05fc6bbfb4ab719c8e",
       "expected": true
     },
     {
@@ -147,7 +183,7 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "c60b4a1b306cfaaac2db1107d96ce074b8457ad285b3ba1d08fe12db2c8fe3035d7d95ad11dbfc51446ff93b11dfc47b32f97fd52044c67020e84c902cb1cb83",
+      "signature_hex": "de2d75074e18c06313b386e41fb2d77a1dad7d3f3bdcb7c9bb52ea9b420bb852c37de43694857ad3ccc2fe41990152ac5e38062f7996ab201102025d51439582",
       "expected": true
     },
     {
@@ -159,13 +195,13 @@
       "seed_name": "seed_text",
       "seed_hex": "48656c6c6f2c20776f726c642120546869732069732061207365656421212121",
       "message_name": "utf8",
-      "message_hex": "68456c6c6f20774f726c6420e2809420736e6f776d616e20753236303320616e64206a6170616e657365",
-      "semantic_message_note": "UTF-8 multibyte text",
+      "message_hex": "68c3a96c6c6f2077c3b6726c6420e2988320e697a5e69cace8aa9e20f09d849e",
+      "semantic_message_note": "UTF-8 multibyte text: 'h\u00e9llo w\u00f6rld \u2603 \u65e5\u672c\u8a9e \ud834\udd1e' (2-4 byte sequences incl. astral plane)",
       "context_hex": "737562737472617465",
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "46a513d6f7a6827ec33f430c5e41862f0700a678905546e445589c7e5151805eba6fccd813d28f1cecffa25ccddcb55bf95ad1bb55677f37bd6adb248aa5f489",
+      "signature_hex": "4c71c1f5f60048f676fb6d06baee3b8b025c1a7b96740bf446ca97454a69ce77a16ed9de4701654f6897c4a618839bd56fc03fa281d16f734da785d1a9884c89",
       "expected": true
     },
     {
@@ -183,7 +219,7 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "98a3d9c400c0d688b37881dc0451075bdfd202ba4dff529ff07436b3a74f7558b9f3ee0b17d10178a758f6dc072f75d44499f8961e11653952f44f887bb86f85",
+      "signature_hex": "c0c656e47d132a1aec6e9201ebf323737f6b074b5e1c4ef859d8cd0f908b100d22923799206b4dc32c374c8d7dfa0e0db3e54923c45091812adcabc0d878c88b",
       "expected": true
     },
     {
@@ -201,7 +237,7 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "3471bf4ce3ad4803ff8b20b1024d3478d0d2d6f48c3c5cda6bb48cc69da9d8214bb4135907260fdbbc8cde46655aecf554f5b0210849b90e3790c79896766b8b",
+      "signature_hex": "bc053e3503f2e622455c414637c7e509af6c3c2f141a1539ac854353cb7a347005a44e46c35c377f667df79dabf64909cb1e441586bd6d7ab1c2149a35274e83",
       "expected": true
     },
     {
@@ -219,7 +255,43 @@
       "wrapping": "none",
       "convention": "substrate_raw",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "40ad261ec54db3bae64581fda878f278e1616171fdcaeda8c995a963a4307a7ec15486847356f07c908db975a5c7cc70ecc4413aa24109b46bf378258bc0788f",
+      "signature_hex": "cea5be5d0203df869345eb4925daa7b4b64e018f0da1bf8ecf90319a66b7fa4f1206c1d4174bde352a9ae43468d3552a8260d5def98f0f87936dd2c6bdf86985",
+      "expected": true
+    },
+    {
+      "tool": "substrate_interface",
+      "tool_version": "1.8.1",
+      "generator_command": "vectors/python/.venv/bin/python vectors/python/gen.py",
+      "backend_version": "py-sr25519-bindings 0.2.4",
+      "name": "substrate_interface:seed_text:prewrapped:substrate_raw",
+      "seed_name": "seed_text",
+      "seed_hex": "48656c6c6f2c20776f726c642120546869732069732061207365656421212121",
+      "message_name": "prewrapped",
+      "message_hex": "3c42797465733e7072652d77726170706564207061796c6f61643c2f42797465733e",
+      "semantic_message_note": "already <Bytes>-wrapped: polkadot-js u8aWrapBytes signs this AS-IS (passthrough), so it is signed under substrate_raw and verify_wrapped_bytes must not re-wrap it",
+      "context_hex": "737562737472617465",
+      "wrapping": "none",
+      "convention": "substrate_raw",
+      "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
+      "signature_hex": "6cb3b98b69088a66b006b317733a1b0ee2d0fa29cb0a5c06cd0f77816d156e09c96d5006bd01c21db51d2494cb957849d679b8fd36a666b286fae3c4201df982",
+      "expected": true
+    },
+    {
+      "tool": "substrate_interface",
+      "tool_version": "1.8.1",
+      "generator_command": "vectors/python/.venv/bin/python vectors/python/gen.py",
+      "backend_version": "py-sr25519-bindings 0.2.4",
+      "name": "substrate_interface:seed_text:eth_prefixed:substrate_raw",
+      "seed_name": "seed_text",
+      "seed_hex": "48656c6c6f2c20776f726c642120546869732069732061207365656421212121",
+      "message_name": "eth_prefixed",
+      "message_hex": "19457468657265756d205369676e6564204d6573736167653a0a68656c6c6f2073723235353139",
+      "semantic_message_note": "Ethereum signed-message prefix + 'hello sr25519': u8aWrapBytes passthrough case two",
+      "context_hex": "737562737472617465",
+      "wrapping": "none",
+      "convention": "substrate_raw",
+      "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
+      "signature_hex": "606cbf95f7d8c1d698e47d4a4305c39bc7a94bd34fb8bae5100161aae9f9105dd247fd05f9d28e0cbb92a2cc578af4d43a8932873fde74ab480b281127342680",
       "expected": true
     },
     {
@@ -237,7 +309,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "7c12ff03039c72bc7deb7a37c57173c9138fe8babac403f13e550bb55c9226571cd2576b242fcb4cf79fea129a065ec48b735afb18e3c922c239ee2c3194a388",
+      "signature_hex": "a0ead262f9cb30ce3e6fe3c4d49a00570f80267a79327559ddb0fef252b0370ceb428905e6b72c66babf0edab5f4ac16b26c55f146ea10c0ecf0cb2a401cbf8b",
       "expected": true
     },
     {
@@ -255,7 +327,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "cc314d3a880971061abb0678d77870029bd521f0644e9f5edeb4be8b2366341ee46dd9818248d1d2a63212e8fdb619d0bf5bd3dd36863acce81bcb7a9e076b83",
+      "signature_hex": "3c90f4e2463f65f181750472bbf488884fbeda9911d9977d91f47516363dbc26a808a41f483c99096c90aed6225239bc8346a68ec6474e8b6e793bce7f0c9587",
       "expected": true
     },
     {
@@ -267,13 +339,13 @@
       "seed_name": "seed_ones",
       "seed_hex": "0101010101010101010101010101010101010101010101010101010101010101",
       "message_name": "utf8",
-      "message_hex": "68456c6c6f20774f726c6420e2809420736e6f776d616e20753236303320616e64206a6170616e657365",
-      "semantic_message_note": "UTF-8 multibyte text",
+      "message_hex": "68c3a96c6c6f2077c3b6726c6420e2988320e697a5e69cace8aa9e20f09d849e",
+      "semantic_message_note": "UTF-8 multibyte text: 'h\u00e9llo w\u00f6rld \u2603 \u65e5\u672c\u8a9e \ud834\udd1e' (2-4 byte sequences incl. astral plane)",
       "context_hex": "737562737472617465",
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "205a7546ff9d78519a465479470d2037ec7ab8118bbc028bfe226ca748b4581e2984410c13634756a729d2b021673c84e88e3967ba5bf4859d5f66e3552e3884",
+      "signature_hex": "ac9051ac1013fe7b2b3a5a81ca60158eb922a3281bb6bea7605b1033335cb45fdfe2ecc8ffec764eddb4a1b7769a466c65a288669718259107548e5e8b79f687",
       "expected": true
     },
     {
@@ -291,7 +363,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "88a18b345b07d4a51126430b77f94d2b820edf38f1df2d372e09f8870d46a9144b29e2d4ff2a5bd39db3d6144c2a0669cb3a1b90e689abf870eaf8bb12dd3883",
+      "signature_hex": "8013b8e9a456291bad562c236c5ba7a47bb3c8b6f4a1ccd72136b20bd2448e305743c475c56971b2251227b0548c3426ff988529e701cb2e5dd75175e118e889",
       "expected": true
     },
     {
@@ -309,7 +381,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "d4f80e25a6b4ace8d3d7e4a562b4a6f2b5a26b27de1da8744317feb22961905e1eddf50a946f61b96d74707921d4a3fb8f10f34f3dbaab471e32f44aa0057f89",
+      "signature_hex": "f8ef9b9a4043780f625dc984ebe5ddb80869d69372381a9e999704862030f203420733ea6ab3198ceff5b986376a7859d935f87055ed0477d3b38d876be9778a",
       "expected": true
     },
     {
@@ -327,7 +399,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "bcb613597ceb46cb04fbcd896978411188c92e532e97ae241af8a6dfc784271cc1eae9e354fca97cf899b0ad5d797cddc93b5d9cf0b107441ccc072d96946c8f",
+      "signature_hex": "7e82932c82c10b975360b4fb4b2395e99b3511d9fc1285711f979956cf5c82677cc1ba30527489811358ddcaf154c97a05cfa0b1f5f1cd2ee73a78b3cf5f6d83",
       "expected": true
     },
     {
@@ -345,7 +417,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "b05279b38e0562ddfb762e2e41d5379c46c063fa9050f38db32dbfd36175922a4350d2e305d0a2daed60f8d6171f3c24fd066bd75055637c7f3fd068e1652a8f",
+      "signature_hex": "14513bbb499f0bf6403729692c14c742b9a0613ea8ad4fd24301cf3382347751bd7489539b16739b95b458fcd245e771d4d008da00c8ff87d809b9abd5fbac87",
       "expected": true
     },
     {
@@ -363,7 +435,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "ccc494d082053641914c38821c38bae9b1e028b5d773f1d76a67426794c7154ca1cba35581d9b4011c3bf34b61ce1dcdd7717575f863a2ca6682a9f18f093d8c",
+      "signature_hex": "32f7e8975e2c2812912891e7239dadb22f7d014b951f5bd14bcef539c6cd0663b2184001864caef9d28a6f0166296018ed677f8b058df07dcabdf4802bb82081",
       "expected": true
     },
     {
@@ -375,13 +447,13 @@
       "seed_name": "seed_text",
       "seed_hex": "48656c6c6f2c20776f726c642120546869732069732061207365656421212121",
       "message_name": "utf8",
-      "message_hex": "68456c6c6f20774f726c6420e2809420736e6f776d616e20753236303320616e64206a6170616e657365",
-      "semantic_message_note": "UTF-8 multibyte text",
+      "message_hex": "68c3a96c6c6f2077c3b6726c6420e2988320e697a5e69cace8aa9e20f09d849e",
+      "semantic_message_note": "UTF-8 multibyte text: 'h\u00e9llo w\u00f6rld \u2603 \u65e5\u672c\u8a9e \ud834\udd1e' (2-4 byte sequences incl. astral plane)",
       "context_hex": "737562737472617465",
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "c286795693ff54524ed2568f6158eb2d11ddf2438c3bc88f8858823af8a5c15f549a771905120cfcd1798433a423058a8d982d7588d585100e8d917c1258658c",
+      "signature_hex": "bcd6faff7299d04758ea0bb68c345abbdc31397a301904202104d13ba1fc5c0fc7764c6fc8f89d54427e8f946a1511c6a5aff1440d2ef6a0e867f0a3cf1c738d",
       "expected": true
     },
     {
@@ -399,7 +471,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "98d983c9b79a3a89ba903aae8ce6cc94df366df51db861934a04c35d95b1ca62207a256eee8e94f2afe1417e1bad70f5709e18511b245d436cdee567c237908a",
+      "signature_hex": "68b39768dcda2363e87f3bbbb0db72586b2dd5c257b4984f36abfd087a6fb57988f69d3ab23fa21a182b3d7538ce1aec50964d100b271b55adf117736ec09f83",
       "expected": true
     },
     {
@@ -417,7 +489,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "c87f4f57095bbcc5e0182bfdd6832cdfe7519260b9bbb570d375a6cb50c36a5b99d55051eae2e346a4d7c12552a05dad2cb1c3aa10d7e078eeac4c792bf1268d",
+      "signature_hex": "0eff4952ae8040f49a9185b896a42f2fadb8e80cb8304ae41b362bfeec888446709aa81ef2d7cfb52f7590477ba7b7e6736f6c8c028969fa9916ea245dda1f8d",
       "expected": true
     },
     {
@@ -435,7 +507,7 @@
       "wrapping": "bytes_xml",
       "convention": "bytes_xml",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "684dbda10146f72c9c7f43a2b3ee2f4a0da74d954d566c482ab4500a4a620e380bd63248634fd82560de3feffaf66fdfc6503c692c5aa5a35fab77bab5ab8587",
+      "signature_hex": "a424c1416adea045a84b23b9d94a3b523818cfec38de42000976c7ad0854084776d23914073d25fdd72169ddef9350d2034d86a9c84d0a0fbae11f03c2897180",
       "expected": true
     },
     {
@@ -453,7 +525,7 @@
       "convention": "substrate_raw",
       "message_hex": "69656c6c6f20776f726c64",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "54d28697161854f23a55f8a14fe923b59089a816320c74f8c1feeef0373fa84c301a10ddad10c92c1e9a1dce57da5b12c4d9c1c8f6094113bb062ac870a37e81"
+      "signature_hex": "e0249b83010b8e3ecfea1f2fb81f9846d489c27b6896e83e6aaf40256280d15ea63635e7f9aa12e44093abba69fe3dc59d4b340246dac4d03e837a59b555a282"
     },
     {
       "tool": "substrate_interface",
@@ -470,7 +542,7 @@
       "convention": "substrate_raw",
       "message_hex": "68656c6c6f20776f726c64",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "54d28697161854f23a55f9a14fe923b59089a816320c74f8c1feeef0373fa84c301a10ddad10c92c1e9a1dce57da5b12c4d9c1c8f6094113bb062ac870a37e81"
+      "signature_hex": "e0249b83010b8e3ecfea1e2fb81f9846d489c27b6896e83e6aaf40256280d15ea63635e7f9aa12e44093abba69fe3dc59d4b340246dac4d03e837a59b555a282"
     },
     {
       "tool": "substrate_interface",
@@ -487,7 +559,7 @@
       "convention": "substrate_raw",
       "message_hex": "68656c6c6f20776f726c64",
       "public_key_hex": "e0a115bf22956eddb230e8972a18a40bc134729aab091305f4aa4d0408424f0a",
-      "signature_hex": "54d28697161854f23a55f8a14fe923b59089a816320c74f8c1feeef0373fa84c301a10ddad10c92c1e9a1dce57da5b12c4d9c1c8f6094113bb062ac870a37e81"
+      "signature_hex": "e0249b83010b8e3ecfea1f2fb81f9846d489c27b6896e83e6aaf40256280d15ea63635e7f9aa12e44093abba69fe3dc59d4b340246dac4d03e837a59b555a282"
     },
     {
       "tool": "substrate_interface",
@@ -504,7 +576,7 @@
       "convention": "raw_context",
       "message_hex": "68656c6c6f20776f726c64",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "54d28697161854f23a55f8a14fe923b59089a816320c74f8c1feeef0373fa84c301a10ddad10c92c1e9a1dce57da5b12c4d9c1c8f6094113bb062ac870a37e81"
+      "signature_hex": "e0249b83010b8e3ecfea1f2fb81f9846d489c27b6896e83e6aaf40256280d15ea63635e7f9aa12e44093abba69fe3dc59d4b340246dac4d03e837a59b555a282"
     },
     {
       "tool": "substrate_interface",
@@ -521,7 +593,7 @@
       "convention": "substrate_raw",
       "message_hex": "68656c6c6f20776f726c64",
       "public_key_hex": "189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
-      "signature_hex": "0a6ac99c3b6578419af487a281d84df42a2aff335a1563fe56aadc0dcf589f644bd6f5022eaaec5336605ecdd5ca8541824d24c06702d7123ce2dbdd0d24868a"
+      "signature_hex": "8e24e8a6842e7479f6f941caef99d2171490b90cc55858835af1fed7a99aac33b05b82616ea955b264d8836eb8a5c68a15ba27a87964373b5d480792f2a49180"
     }
   ]
 }

@@ -11,6 +11,15 @@
 //!     message is rejected before it can be absorbed into the transcript.
 #![forbid(unsafe_code)]
 
+// Rustler's catch_unwind only catches *unwinding* panics; under panic=abort a
+// NIF panic kills the whole BEAM VM. This fails every such build outright —
+// including consumer force-builds with RUSTFLAGS/-C panic=abort or a workspace
+// profile override, which the repo-side CI grep guard can never see.
+#[cfg(panic = "abort")]
+compile_error!(
+    "sr25519_nif must be built with panic = \"unwind\"; an aborting NIF panic kills the BEAM VM"
+);
+
 use rustler::{Atom, Binary, Encoder, Env, NifResult, Term};
 use schnorrkel::{PublicKey, Signature};
 
@@ -21,13 +30,17 @@ mod atoms {
         invalid_length,
         invalid_public_key,
         message_too_large,
+        context_too_large,
     }
 }
 
-/// Hard cap on the message (and caller-supplied context) size. An unbounded
-/// binary absorbed into the Merlin transcript could block the BEAM scheduler
-/// (Erlang's ~1 ms NIF guideline). Kept in sync with `Sr25519.max_message_bytes/0`.
+/// Hard caps on what gets absorbed into the Merlin transcript. An unbounded
+/// binary could block the BEAM scheduler (Erlang's ~1 ms NIF guideline); the
+/// context gets its own small cap so the total stays at the benchmarked bound
+/// rather than doubling it. Kept in sync with `Sr25519.max_message_bytes/0`
+/// and `Sr25519.max_context_bytes/0` (asserted equal by the test suite).
 const MAX_MESSAGE_BYTES: usize = 65_536;
+const MAX_CONTEXT_BYTES: usize = 1_024;
 
 const PUBLIC_KEY_BYTES: usize = 32;
 const SIGNATURE_BYTES: usize = 64;
@@ -41,7 +54,8 @@ const SIGNATURE_BYTES: usize = 64;
 ///   * `{:ok, false}` — 64-byte signature that parses-but-fails, OR is
 ///                      structurally invalid but length-correct (never a crash)
 ///   * `{:error, :invalid_length}`     — pubkey ≠ 32 or signature ≠ 64 bytes
-///   * `{:error, :message_too_large}`  — message/context exceeds the cap
+///   * `{:error, :message_too_large}`  — message exceeds MAX_MESSAGE_BYTES
+///   * `{:error, :context_too_large}`  — context exceeds MAX_CONTEXT_BYTES
 ///   * `{:error, :invalid_public_key}` — pubkey schnorrkel rejects structurally
 #[rustler::nif]
 fn verify_raw<'a>(
@@ -56,10 +70,13 @@ fn verify_raw<'a>(
     let pk = public_key.as_slice();
     let ctx = context.as_slice();
 
-    // Size cap (backstop — the Elixir layer checks first to avoid copying a huge
-    // binary across the boundary; re-checked here as the authoritative guard).
-    if msg.len() > MAX_MESSAGE_BYTES || ctx.len() > MAX_MESSAGE_BYTES {
+    // Size caps (backstop — the Elixir layer checks first; re-checked here as
+    // the authoritative guard so no path into the NIF can bypass them).
+    if msg.len() > MAX_MESSAGE_BYTES {
         return Ok(err(env, atoms::message_too_large()));
+    }
+    if ctx.len() > MAX_CONTEXT_BYTES {
+        return Ok(err(env, atoms::context_too_large()));
     }
 
     // Length validation BEFORE touching schnorrkel — wrong sizes are a caller

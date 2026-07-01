@@ -6,7 +6,10 @@ defmodule Sr25519.Conformance.L7Test do
   @root Path.expand(Path.join([__DIR__, "..", ".."]))
   @checksum Path.join(@root, "checksum-Elixir.Sr25519.Native.exs")
 
+  # Spawns the `mix` executable, which System.cmd cannot do on Windows (mix.bat
+  # needs cmd.exe); test_helper.exs excludes :posix_build there.
   @tag rung: :L7
+  @tag :posix_build
   @tag timeout: 300_000
   test "mix hex.build tarball includes the checksum file, native sources, and Cargo.lock" do
     # The real checksum is generated from published artifacts at release time; a
@@ -19,12 +22,13 @@ defmodule Sr25519.Conformance.L7Test do
     File.rm_rf!(out_dir)
     on_exit(fn -> File.rm_rf(out_dir) end)
 
+    # Note: `mix hex.build` only assembles the tarball — it never compiles the
+    # project, so no NIF build happens in the child (don't add one).
     {out, code} =
       System.cmd("mix", ["hex.build", "--unpack", "-o", out_dir],
         cd: @root,
         stderr_to_stdout: true,
         env: [
-          {"SR25519_FORCE_BUILD", "1"},
           {"LANG", "C.UTF-8"},
           {"LC_ALL", "C.UTF-8"},
           {"MIX_ENV", "dev"}
@@ -43,6 +47,8 @@ defmodule Sr25519.Conformance.L7Test do
       "native/sr25519_nif/Cargo.lock",
       "native/sr25519_nif/Cargo.toml",
       "native/sr25519_nif/src/lib.rs",
+      # the musl -crt-static rustflags force-build users need for a loadable NIF
+      "native/sr25519_nif/.cargo/config.toml",
       "lib/sr25519.ex",
       "NOTICE",
       "mix.exs"

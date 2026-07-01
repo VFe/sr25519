@@ -23,9 +23,10 @@ defmodule Sr25519.MixProject do
     [extra_applications: [:logger]]
   end
 
-  # `mix conformance` must run in the test env so ExUnit/vectors are available.
+  # `mix conformance` needs the test env (ExUnit + vectors); `mix docs` and the
+  # docs step of `mix hex.publish` need the :docs env where ex_doc lives.
   def cli do
-    [preferred_envs: [conformance: :test]]
+    [preferred_envs: [conformance: :test, docs: :docs, "hex.publish": :docs]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]

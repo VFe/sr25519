@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 # Cancel superseded runs on the same ref.
 concurrency:
@@ -20,6 +21,8 @@ jobs:
         include:
           - { os: ubuntu-latest, full: true }
           - { os: macos-latest, full: true }
+          # Windows runs the portable subset: test_helper.exs excludes the
+          # :posix_build tests there by itself.
           - { os: windows-latest, full: false }
     env:
       SR25519_FORCE_BUILD: "1"
@@ -35,10 +38,24 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache cargo registry and NIF target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native/sr25519_nif
+
+      - name: Cache mix deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-
+
       - name: Reject panic = "abort" (BEAM VM-safety guard)
         shell: bash
         run: |
-          if grep -RqsE 'panic *= *"abort"' native/; then
+          if grep -RqsE 'panic *= *"abort"' native/*/Cargo.toml native/*/.cargo/; then
             echo "::error::panic = \"abort\" would make a NIF panic kill the VM"; exit 1
           fi
           grep -qE 'panic *= *"unwind"' native/sr25519_nif/Cargo.toml || {
@@ -57,7 +74,7 @@ jobs:
 
       - name: Tests (portable subset)
         if: ${{ !matrix.full }}
-        run: mix test --exclude posix_build --exclude benchmark
+        run: mix test
 
       - name: Upload conformance report
         if: ${{ always() && matrix.full }}

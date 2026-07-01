@@ -7,15 +7,15 @@ defmodule Sr25519.PropertyTest do
 
   @good Sr25519.Vectors.known_answer()
 
-  defp bytes_of_len(gen) do
-    gen |> StreamData.map(&:crypto.strong_rand_bytes/1)
-  end
+  # NOTE: generate bytes with StreamData (seeded, shrinkable), never
+  # :crypto.strong_rand_bytes — CSPRNG output is not a function of the ExUnit
+  # seed, so failures would not reproduce with `mix test --seed N`.
 
   @tag rung: :L6
   property "∀ wrong-length signature → {:error, :invalid_length}" do
     check all(
             len <- StreamData.filter(StreamData.integer(0..200), &(&1 != 64)),
-            sig <- bytes_of_len(StreamData.constant(len))
+            sig <- StreamData.binary(length: len)
           ) do
       assert Sr25519.verify_raw("m", sig, <<0::256>>, "substrate") == {:error, :invalid_length}
     end
@@ -25,7 +25,7 @@ defmodule Sr25519.PropertyTest do
   property "∀ wrong-length public key → {:error, :invalid_length}" do
     check all(
             len <- StreamData.filter(StreamData.integer(0..200), &(&1 != 32)),
-            pk <- bytes_of_len(StreamData.constant(len))
+            pk <- StreamData.binary(length: len)
           ) do
       assert Sr25519.verify_raw("m", <<0::512>>, pk, "substrate") == {:error, :invalid_length}
     end

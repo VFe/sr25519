@@ -33,8 +33,7 @@ defmodule Sr25519.ConformanceFormatter do
     end
   end
 
-  def handle_cast({:suite_finished, _}, config), do: write(config)
-  def handle_cast({:suite_finished, _, _}, config), do: write(config)
+  def handle_cast({:suite_finished, _times_us}, config), do: write(config)
   def handle_cast(_event, config), do: {:noreply, config}
 
   defp init_agg, do: %{passed: 0, failed: 0, skipped: 0, failing: []}

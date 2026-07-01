@@ -12,11 +12,13 @@ defmodule Sr25519.NifSafetyTest do
 
   @native_dir Path.expand(Path.join([__DIR__, "..", "native/sr25519_nif"]))
 
-  # Assumes a POSIX dynamic-library layout (libsr25519_nif.{so,dylib}); the CI
-  # Windows job excludes this tag. The panic=unwind guarantee is also enforced
-  # everywhere by the CI grep guard against `panic = "abort"`.
+  # Assumes a POSIX dynamic-library layout (libsr25519_nif.{so,dylib}) and a
+  # Rust toolchain; test_helper.exs excludes the tags where either is missing.
+  # The panic=unwind guarantee is also enforced everywhere by the compile_error!
+  # guard in src/lib.rs and the CI grep against `panic = "abort"`.
   @tag rung: :L6
   @tag :posix_build
+  @tag :requires_cargo
   @tag timeout: 300_000
   test "a deliberate NIF panic does not crash the BEAM VM (panic = unwind)" do
     # Build the panic-test variant in the RELEASE profile, to prove the actual
@@ -30,14 +32,19 @@ defmodule Sr25519.NifSafetyTest do
     assert code == 0, "cargo build --features panic_test failed:\n#{out}"
 
     # `:erlang.load_nif/2` takes the path WITHOUT extension and appends `.so` on
-    # unix (macOS included), so ensure a `.so` exists (copy the macOS `.dylib`).
+    # unix (macOS included). cargo emits `.dylib` on macOS: always copy the
+    # platform's fresh artifact over the `.so` name, never trust a stale one
+    # left by a previous run.
     base = Path.join(@native_dir, "target/release/libsr25519_nif")
 
-    ext =
-      Enum.find([".so", ".dylib"], &File.exists?(base <> &1)) ||
-        flunk("no built NIF artifact at #{base}.{so,dylib}")
+    source =
+      case :os.type() do
+        {:unix, :darwin} -> base <> ".dylib"
+        _ -> base <> ".so"
+      end
 
-    if ext == ".dylib", do: File.cp!(base <> ".dylib", base <> ".so")
+    assert File.exists?(source), "no built NIF artifact at #{source}"
+    if source != base <> ".so", do: File.cp!(source, base <> ".so")
 
     script_path = Path.join(System.tmp_dir!(), "sr25519_panic_child.exs")
     File.write!(script_path, child_script(base))

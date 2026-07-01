@@ -100,4 +100,49 @@ defmodule Sr25519.TaxonomyTest do
     assert Sr25519.verify_raw("m", <<0::512>>, @bad_pubkey, "substrate") ==
              {:error, :invalid_public_key}
   end
+
+  @tag rung: :L3
+  test "context larger than max_context_bytes -> {:error, :context_too_large}" do
+    big_ctx = :binary.copy(<<0>>, Sr25519.max_context_bytes() + 1)
+
+    assert Sr25519.verify_raw("m", <<0::512>>, <<0::256>>, big_ctx) ==
+             {:error, :context_too_large}
+
+    at_max = :binary.copy(<<0>>, Sr25519.max_context_bytes())
+    assert Sr25519.verify_raw("m", <<0::512>>, <<0::256>>, at_max) == {:ok, false}
+  end
+
+  @tag rung: :L3
+  test "the Rust size caps backstop the NIF even when the Elixir guard is bypassed" do
+    # Call the NIF directly (as no consumer should) to prove the caps are
+    # enforced in Rust too, not only by the Elixir wrapper.
+    too_big = :binary.copy(<<0>>, Sr25519.max_message_bytes() + 1)
+
+    assert Sr25519.Native.verify_raw(too_big, <<0::512>>, <<0::256>>, "substrate") ==
+             {:error, :message_too_large}
+
+    big_ctx = :binary.copy(<<0>>, Sr25519.max_context_bytes() + 1)
+
+    assert Sr25519.Native.verify_raw("m", <<0::512>>, <<0::256>>, big_ctx) ==
+             {:error, :context_too_large}
+  end
+
+  @tag rung: :L3
+  test "the corpus spec cap matches the library constant" do
+    assert Sr25519.Vectors.spec()["max_message_bytes"] == Sr25519.max_message_bytes()
+  end
+
+  @tag rung: :L3
+  test "verify_wrapped_bytes rejects messages whose wrapped form would exceed the cap" do
+    overhead = byte_size("<Bytes>") + byte_size("</Bytes>")
+    just_over = :binary.copy(<<0>>, Sr25519.max_message_bytes() - overhead + 1)
+
+    assert Sr25519.Substrate.verify_wrapped_bytes(just_over, <<0::512>>, <<0::256>>) ==
+             {:error, :message_too_large}
+
+    at_effective_max = :binary.copy(<<0>>, Sr25519.max_message_bytes() - overhead)
+
+    assert Sr25519.Substrate.verify_wrapped_bytes(at_effective_max, <<0::512>>, <<0::256>>) ==
+             {:ok, false}
+  end
 end

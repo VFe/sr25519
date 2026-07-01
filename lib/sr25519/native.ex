@@ -7,12 +7,30 @@ defmodule Sr25519.Native do
   version = Mix.Project.config()[:version]
   source_url = Mix.Project.config()[:source_url]
 
+  # The target list is pinned EXPLICITLY (not left to RustlerPrecompiled's
+  # defaults) so a rustler_precompiled upgrade can never make consumers expect
+  # artifacts the release workflow doesn't build. This list, `nif_versions`,
+  # and the matrix in .github/workflows/release.yml must change together.
+  @targets ~w(
+    aarch64-apple-darwin
+    aarch64-unknown-linux-gnu
+    aarch64-unknown-linux-musl
+    arm-unknown-linux-gnueabihf
+    riscv64gc-unknown-linux-gnu
+    x86_64-apple-darwin
+    x86_64-pc-windows-gnu
+    x86_64-pc-windows-msvc
+    x86_64-unknown-linux-gnu
+    x86_64-unknown-linux-musl
+  )
+
   use RustlerPrecompiled,
     otp_app: :sr25519,
     crate: "sr25519_nif",
     base_url: "#{source_url}/releases/download/v#{version}",
     force_build: System.get_env("SR25519_FORCE_BUILD") in ["1", "true"],
     version: version,
+    targets: @targets,
     nif_versions: ["2.15"]
 
   # Fallback bodies; replaced by the loaded NIF. If loading failed you get a

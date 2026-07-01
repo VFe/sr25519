@@ -33,8 +33,21 @@ end
 ```
 
 Precompiled NIFs are downloaded and checked against a committed SHA256 checksum.
-To compile from source instead (any unlisted target, or by choice), set
-`SR25519_FORCE_BUILD=1` and have a Rust toolchain installed.
+
+To compile from source instead (an unlisted target, or by choice), you need a
+Rust toolchain **and** the `rustler` package — it is an *optional* dependency of
+this library, so Hex does not fetch it for you:
+
+```elixir
+def deps do
+  [
+    {:sr25519, "~> 0.1"},
+    {:rustler, "~> 0.38"}  # only needed when force-building from source
+  ]
+end
+```
+
+Then set `SR25519_FORCE_BUILD=1` for the compile.
 
 ## Usage
 
@@ -48,8 +61,9 @@ public key.
 Sr25519.Substrate.verify_raw_message(message, signature, public_key)
 #=> {:ok, true} | {:ok, false} | {:error, reason}
 
-# Substrate: message wrapped as <Bytes>…</Bytes> before signing
-# (polkadot-js extension / signRaw message-signing convention).
+# Substrate: polkadot-js extension / signRaw message-signing convention.
+# Mirrors u8aWrapBytes exactly: wraps the message as <Bytes>…</Bytes> unless it
+# is already wrapped or Ethereum-prefixed (those are signed — and verified — as-is).
 Sr25519.Substrate.verify_wrapped_bytes(message, signature, public_key)
 
 # Low-level: you supply the signing context yourself.
@@ -75,6 +89,7 @@ Sr25519.Substrate.verify_raw_message(payload, signature, hotkey_public_key)
 | `{:error, :invalid_type}` | a non-binary argument |
 | `{:error, :invalid_length}` | public key ≠ 32 bytes, or signature ≠ 64 bytes |
 | `{:error, :message_too_large}` | message exceeds `Sr25519.max_message_bytes/0` |
+| `{:error, :context_too_large}` | signing context exceeds `Sr25519.max_context_bytes/0` |
 | `{:error, :invalid_public_key}` | public-key bytes schnorrkel rejects structurally |
 
 Both `:error` and `{:ok, false}` fail closed — the distinction is for
