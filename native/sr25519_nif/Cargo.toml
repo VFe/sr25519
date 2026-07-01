@@ -1,0 +1,30 @@
+[package]
+name = "sr25519_nif"
+version = "0.1.0"
+edition = "2021"
+authors = ["VFe <vfe@einsfeld.com>"]
+license = "MIT OR Apache-2.0"
+description = "Rustler NIF: Substrate-compatible sr25519 (schnorrkel) signature verification for the BEAM."
+publish = false
+
+[lib]
+name = "sr25519_nif"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = "0.38.0"
+# Exact pin: the verify domain must not move under us. Matches the schnorrkel
+# lineage used by sp_core / substrate-interface / @scure.
+schnorrkel = "=0.11.5"
+
+[features]
+# Compiles a test-only NIF that deliberately panics. Enabled ONLY by the
+# NIF-safety test that runs it in a separate BEAM OS process; never in release.
+panic_test = []
+
+[profile.release]
+# REQUIRED: rustler's catch_unwind can only catch *unwinding* panics. An
+# aborting panic kills the whole BEAM VM. A CI guard also rejects `abort`.
+panic = "unwind"
+lto = true

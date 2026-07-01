@@ -1,0 +1,153 @@
+// Oracle generator: @scure/sr25519 (pure-JS noble, independently audited).
+//
+// This is the *genuinely independent* oracle (different lineage from
+// schnorrkel/substrate-interface): it proves the convention is RIGHT, not merely
+// self-consistent. @scure bakes in the "substrate" signing context and signs the
+// RAW message bytes, so we feed it the (optionally <Bytes>-wrapped) application
+// message directly. Signing is made deterministic by passing a fixed `random`,
+// so the emitted corpus is byte-reproducible.
+//
+// Usage: node vectors/node/gen.mjs  (writes test/vectors/scure.json)
+import * as scure from '@scure/sr25519';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(HERE, '..', '..');
+const spec = JSON.parse(readFileSync(join(ROOT, 'vectors', 'corpus_spec.json'), 'utf8'));
+const pkgVersion = JSON.parse(
+  readFileSync(join(HERE, 'node_modules', '@scure', 'sr25519', 'package.json'), 'utf8')
+).version;
+
+const enc = new TextEncoder();
+const toHex = (u) => Buffer.from(u).toString('hex');
+const fromHex = (h) => Uint8Array.from(Buffer.from(h, 'hex'));
+const WRAP_PREFIX = enc.encode('<Bytes>');
+const WRAP_SUFFIX = enc.encode('</Bytes>');
+const FIXED_RANDOM = new Uint8Array(32); // deterministic signatures
+const GEN_CMD = 'node vectors/node/gen.mjs';
+
+function concat(...arrs) {
+  const len = arrs.reduce((n, a) => n + a.length, 0);
+  const out = new Uint8Array(len);
+  let o = 0;
+  for (const a of arrs) { out.set(a, o); o += a.length; }
+  return out;
+}
+function messageBytes(m) {
+  if (m.utf8 !== undefined) return enc.encode(m.utf8);
+  if (m.hex !== undefined) return fromHex(m.hex);
+  if (m.repeat_hex !== undefined) return new Uint8Array(m.count).fill(parseInt(m.repeat_hex, 16));
+  throw new Error('bad message spec: ' + m.name);
+}
+function applyWrap(bytes, wrapping) {
+  if (wrapping === 'none') return bytes;
+  if (wrapping === 'bytes_xml') return concat(WRAP_PREFIX, bytes, WRAP_SUFFIX);
+  throw new Error('unknown wrapping ' + wrapping);
+}
+// A message may pin itself to a single (oracle, seed, convention) cell — e.g. the
+// bulky exactly-MAX vector, which only one oracle needs to emit.
+function messageApplies(m, oracle, seedName, convName) {
+  const o = m.only;
+  if (!o) return true;
+  return (
+    (!o.oracle || o.oracle === oracle) &&
+    (!o.seed_name || o.seed_name === seedName) &&
+    (!o.convention || o.convention === convName)
+  );
+}
+
+const keypairs = Object.fromEntries(spec.seeds.map((s) => {
+  const secret = scure.secretFromSeed(fromHex(s.hex));
+  return [s.name, { seed: s, secret, pub: scure.getPublicKey(secret) }];
+}));
+
+function record(extra) {
+  return {
+    tool: 'scure',
+    tool_version: pkgVersion,
+    generator_command: GEN_CMD,
+    backend_version: `node ${process.version}`,
+    ...extra,
+  };
+}
+
+const vectors = [];
+
+// --- Positives: every seed x convention(where scure participates) x message ---
+for (const conv of spec.conventions) {
+  if (!conv.oracles.includes('scure')) continue;
+  const contextHex = toHex(enc.encode(conv.context));
+  for (const seedName of Object.keys(keypairs)) {
+    const kp = keypairs[seedName];
+    for (const m of spec.messages) {
+      if ((conv.skip_messages || []).includes(m.name)) continue;
+      if (!messageApplies(m, 'scure', seedName, conv.name)) continue;
+      const msg = messageBytes(m);
+      const signed = applyWrap(msg, conv.wrapping);
+      const sig = scure.sign(kp.secret, signed, FIXED_RANDOM);
+      if (!scure.verify(signed, sig, kp.pub)) throw new Error('scure self-verify failed');
+      vectors.push(record({
+        name: `scure:${seedName}:${m.name}:${conv.name}`,
+        seed_name: seedName, seed_hex: kp.seed.hex,
+        message_name: m.name, message_hex: toHex(msg), semantic_message_note: m.note,
+        context_hex: contextHex, wrapping: conv.wrapping, convention: conv.name,
+        public_key_hex: toHex(kp.pub), signature_hex: toHex(sig), expected: true,
+      }));
+    }
+  }
+}
+
+// --- Negatives (representative per kind; property tests cover breadth) ---
+const kpA = keypairs['seed_ones'];
+const kpB = keypairs['seed_text'];
+const subCtxHex = toHex(enc.encode(spec.context));
+const asciiMsg = messageBytes(spec.messages.find((m) => m.name === 'ascii'));
+const goodSig = scure.sign(kpA.secret, asciiMsg, FIXED_RANDOM);
+
+function neg(name, extra) {
+  vectors.push(record({
+    name: `scure:neg:${name}`, seed_name: 'seed_ones', message_name: 'ascii',
+    semantic_message_note: 'negative: ' + name, expected: false,
+    context_hex: subCtxHex, wrapping: 'none', convention: 'substrate_raw',
+    message_hex: toHex(asciiMsg), public_key_hex: toHex(kpA.pub), signature_hex: toHex(goodSig),
+    ...extra,
+  }));
+}
+// tamper_message: flip first byte of the message
+const tamperedMsg = Uint8Array.from(asciiMsg); tamperedMsg[0] ^= 0x01;
+neg('tamper_message', { message_hex: toHex(tamperedMsg) });
+// tamper_sig: flip a middle byte (avoid the schnorrkel marker bit in byte 63)
+const tamperedSig = Uint8Array.from(goodSig); tamperedSig[10] ^= 0x01;
+neg('tamper_sig', { signature_hex: toHex(tamperedSig) });
+// wrong_signer: verify the sig against a different keypair's public key
+neg('wrong_signer', { public_key_hex: toHex(kpB.pub) });
+// wrong_context: valid substrate sig checked under a different context (raw_context path)
+neg('wrong_context', {
+  convention: 'raw_context', context_hex: toHex(enc.encode('totally-wrong-context')),
+});
+// wrong_wrapping: a <Bytes>-wrapped signature checked as if unwrapped
+const wrappedSig = scure.sign(kpA.secret, applyWrap(asciiMsg, 'bytes_xml'), FIXED_RANDOM);
+neg('wrong_wrapping', { signature_hex: toHex(wrappedSig), semantic_message_note: 'negative: wrapped sig verified as raw' });
+
+// --- Known-answer anchor (deterministic, independent oracle) ---
+// A frozen, byte-exact tuple from the independent implementation. Cross-checked
+// against substrate-interface + the schnorrkel crate by the L2/L5 tests.
+const kaMsg = enc.encode('sr25519 known-answer anchor');
+const kaSig = scure.sign(kpA.secret, kaMsg, FIXED_RANDOM);
+vectors.push(record({
+  name: 'scure:known_answer:seed_ones', seed_name: 'seed_ones', message_name: 'known_answer',
+  semantic_message_note: 'known-answer anchor (deterministic @scure signature)',
+  seed_hex: kpA.seed.hex, message_hex: toHex(kaMsg), context_hex: subCtxHex,
+  wrapping: 'none', convention: 'substrate_raw', public_key_hex: toHex(kpA.pub),
+  signature_hex: toHex(kaSig), expected: true, known_answer: true,
+}));
+
+const out = {
+  meta: { tool: 'scure', tool_version: pkgVersion, generator_command: GEN_CMD,
+    note: 'Independent (noble) oracle; deterministic via fixed random; @scure bakes in the "substrate" context.' },
+  vectors,
+};
+writeFileSync(join(ROOT, 'test', 'vectors', 'scure.json'), JSON.stringify(out, null, 2) + '\n');
+console.log(`scure.json: ${vectors.length} vectors (${vectors.filter((v) => v.expected).length} positive, ${vectors.filter((v) => !v.expected).length} negative)`);

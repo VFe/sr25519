@@ -1,0 +1,34 @@
+name: Audit
+
+on:
+  push:
+    paths:
+      - "native/**/Cargo.toml"
+      - "native/**/Cargo.lock"
+      - "native/**/deny.toml"
+      - ".github/workflows/audit.yml"
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+
+jobs:
+  cargo-audit:
+    name: cargo audit (RustSec advisories)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: native/sr25519_nif
+
+  cargo-deny:
+    name: cargo deny (advisories + licenses + sources)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: native/sr25519_nif/Cargo.toml
+          command: check
+          arguments: --all-features

@@ -1,0 +1,7 @@
+# A NIF is dynamically loaded into the BEAM; on musl it must NOT statically link
+# the C runtime or `dlopen` fails. Disable crt-static for the musl targets.
+[target.x86_64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=-crt-static"]
+
+[target.aarch64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=-crt-static"]

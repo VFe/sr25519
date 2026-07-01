@@ -1,0 +1,4 @@
+# `cross` runs the build in a container; pass the requested NIF version through
+# so rustler_precompiled tags the artifact correctly for cross-compiled targets.
+[build.env]
+passthrough = ["RUSTLER_NIF_VERSION"]

@@ -1,0 +1,55 @@
+name: Build precompiled NIFs
+
+# Builds a precompiled NIF for every rustler_precompiled target and attaches it to
+# the GitHub release. After all artifacts exist, generate the checksum file locally
+# with `mix rustler_precompiled.download Sr25519.Native --all --print`, commit it,
+# then `mix hex.build --unpack` (L7) and `mix hex.publish`.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build_release:
+    name: ${{ matrix.job.target }} (nif ${{ matrix.nif }})
+    runs-on: ${{ matrix.job.os }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        nif: ["2.15"]
+        job:
+          - { target: aarch64-apple-darwin, os: macos-14 }
+          - { target: x86_64-apple-darwin, os: macos-13 }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04, use-cross: true }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-22.04, use-cross: true }
+          - { target: arm-unknown-linux-gnueabihf, os: ubuntu-22.04, use-cross: true }
+          - { target: riscv64gc-unknown-linux-gnu, os: ubuntu-22.04, use-cross: true }
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-22.04, use-cross: true }
+          - { target: x86_64-pc-windows-gnu, os: windows-2022 }
+          - { target: x86_64-pc-windows-msvc, os: windows-2022 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract project version
+        shell: bash
+        run: echo "PROJECT_VERSION=$(sed -n 's/^  @version "\(.*\)"/\1/p' mix.exs | head -n1)" >> "$GITHUB_ENV"
+
+      - name: Build the NIF
+        id: build-crate
+        uses: philss/rustler-precompiled-action@v1.1.5
+        with:
+          project-name: sr25519_nif
+          project-version: ${{ env.PROJECT_VERSION }}
+          target: ${{ matrix.job.target }}
+          nif-version: ${{ matrix.nif }}
+          use-cross: ${{ matrix.job.use-cross }}
+          project-dir: "native/sr25519_nif"
+
+      - name: Attach artifact to the release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ steps.build-crate.outputs.file-path }}

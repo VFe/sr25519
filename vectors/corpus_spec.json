@@ -1,0 +1,30 @@
+{
+  "_comment": "Shared, frozen spec that every oracle generator (rust_oracle, python/gen.py, node/gen.mjs) reads, so all three sign IDENTICAL (seed, message, convention) tuples. This is what makes cross-oracle agreement (L5) meaningful. MAX_MESSAGE_BYTES = 65536 must match native/sr25519_nif/src/lib.rs and Sr25519.max_message_bytes/0.",
+  "max_message_bytes": 65536,
+  "context": "substrate",
+  "custom_context": "sr25519-ex-test-context",
+  "seeds": [
+    {
+      "name": "seed_ones",
+      "hex": "0101010101010101010101010101010101010101010101010101010101010101"
+    },
+    {
+      "name": "seed_text",
+      "hex": "48656c6c6f2c20776f726c642120546869732069732061207365656421212121"
+    }
+  ],
+  "messages": [
+    { "name": "empty", "utf8": "", "note": "empty message" },
+    { "name": "ascii", "utf8": "hello world", "note": "short ASCII text" },
+    { "name": "utf8", "utf8": "hEllo wOrld — snowman u2603 and japanese", "note": "UTF-8 multibyte text" },
+    { "name": "raw_binary", "hex": "00010203fffe807f80ff00", "note": "raw bytes including NUL and high bytes" },
+    { "name": "hex_looking", "utf8": "deadbeefcafebabe0123456789abcdef", "note": "ASCII that looks like hex (must be treated as literal bytes, never decoded)" },
+    { "name": "realistic_payload", "utf8": "{\"netuid\":1,\"nonce\":42,\"data\":\"stake\"}.7e1c0c2a-0b3e-4a1f-9c2d-0e1f2a3b4c5d.1782900000.5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty", "note": "Epistula-style Bittensor payload body.uuid.timestamp.signed_for" },
+    { "name": "max_bytes", "repeat_hex": "61", "count": 65536, "note": "exactly MAX_MESSAGE_BYTES bytes of 0x61", "only": { "oracle": "rust", "seed_name": "seed_ones", "convention": "substrate_raw" } }
+  ],
+  "conventions": [
+    { "name": "substrate_raw", "context": "substrate", "wrapping": "none", "oracles": ["rust", "substrate_interface", "scure"] },
+    { "name": "bytes_xml", "context": "substrate", "wrapping": "bytes_xml", "oracles": ["rust", "substrate_interface", "scure"], "skip_messages": ["max_bytes"] },
+    { "name": "raw_context", "context": "sr25519-ex-test-context", "wrapping": "none", "oracles": ["rust"] }
+  ]
+}

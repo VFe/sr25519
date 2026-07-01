@@ -1,0 +1,56 @@
+defmodule Sr25519.Conformance.L7Test do
+  @moduledoc "L7 — the artifact is shippable: the Hex tarball has the right shape."
+  use ExUnit.Case, async: false
+  @moduletag :conformance
+
+  @root Path.expand(Path.join([__DIR__, "..", ".."]))
+  @checksum Path.join(@root, "checksum-Elixir.Sr25519.Native.exs")
+
+  @tag rung: :L7
+  @tag timeout: 300_000
+  test "mix hex.build tarball includes the checksum file, native sources, and Cargo.lock" do
+    # The real checksum is generated from published artifacts at release time; a
+    # transient placeholder lets us validate the tarball SHAPE locally.
+    created = not File.exists?(@checksum)
+    if created, do: File.write!(@checksum, "%{}\n")
+    on_exit(fn -> if created, do: File.rm(@checksum) end)
+
+    out_dir = Path.join(System.tmp_dir!(), "sr25519_pkg_#{System.unique_integer([:positive])}")
+    File.rm_rf!(out_dir)
+    on_exit(fn -> File.rm_rf(out_dir) end)
+
+    {out, code} =
+      System.cmd("mix", ["hex.build", "--unpack", "-o", out_dir],
+        cd: @root,
+        stderr_to_stdout: true,
+        env: [
+          {"SR25519_FORCE_BUILD", "1"},
+          {"LANG", "C.UTF-8"},
+          {"LC_ALL", "C.UTF-8"},
+          {"MIX_ENV", "dev"}
+        ]
+      )
+
+    assert code == 0, "mix hex.build failed:\n#{out}"
+
+    files =
+      Path.join(out_dir, "**")
+      |> Path.wildcard(match_dot: true)
+      |> Enum.map(&Path.relative_to(&1, out_dir))
+
+    required = [
+      "checksum-Elixir.Sr25519.Native.exs",
+      "native/sr25519_nif/Cargo.lock",
+      "native/sr25519_nif/Cargo.toml",
+      "native/sr25519_nif/src/lib.rs",
+      "lib/sr25519.ex",
+      "NOTICE",
+      "mix.exs"
+    ]
+
+    for suffix <- required do
+      assert Enum.any?(files, &String.ends_with?(&1, suffix)),
+             "package tarball is missing #{suffix}"
+    end
+  end
+end

@@ -1,0 +1,38 @@
+# Elixir / Mix
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+*.beam
+/config/*.secret.exs
+.elixir_ls/
+
+# Rust / native build artifacts (never committed; NIFs are precompiled in CI)
+/native/*/target/
+/native/**/*.so
+/native/**/*.dll
+/native/**/*.dylib
+# Force-built NIF that rustler copies into priv/ during local dev
+/priv/
+
+# Oracle generator scratch (vectors themselves ARE committed under test/vectors/)
+/vectors/node/node_modules/
+/vectors/python/__pycache__/
+/vectors/python/.venv/
+/vectors/**/target/
+
+# Conformance harness output
+/conformance_report.json
+
+# The precompiled-artifact checksum file is generated at release time
+# (mix rustler_precompiled.download --all) and committed on the release commit;
+# it is not tracked in ordinary development. The L7 packaging test creates a
+# transient one to validate the tarball shape.
+/checksum-*.exs
+
+# OS / editor
+.DS_Store
+*.swp
