@@ -35,4 +35,3 @@ erl_crash.dump
 # OS / editor
 .DS_Store
 *.swp
-/.claude/
