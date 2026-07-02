@@ -9,12 +9,20 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# Workflow-level default is read-only; the build job elevates only what it needs.
+permissions:
+  contents: read
+
 jobs:
   build_release:
     name: ${{ matrix.job.target }} (nif ${{ matrix.nif }})
     runs-on: ${{ matrix.job.os }}
     permissions:
+      # attach artifacts to the GitHub release
       contents: write
+      # sign build-provenance attestations for the NIF binaries
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -49,6 +57,10 @@ jobs:
             echo "::error::tag $GITHUB_REF_NAME does not match mix.exs version v$PROJECT_VERSION"; exit 1
           fi
 
+      - name: Lockfile integrity (artifact must build from the committed tree)
+        shell: bash
+        run: cargo metadata --locked --format-version 1 --manifest-path native/sr25519_nif/Cargo.toml > /dev/null
+
       - name: Build the NIF
         id: build-crate
         uses: philss/rustler-precompiled-action@v1.1.5
@@ -59,6 +71,14 @@ jobs:
           nif-version: ${{ matrix.nif }}
           use-cross: ${{ matrix.job.use-cross }}
           project-dir: "native/sr25519_nif"
+
+      # Signed build provenance: consumers (and the security review) can verify
+      # each precompiled NIF was built by this workflow from this commit via
+      # `gh attestation verify <artifact> --repo VFe/sr25519`.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.build-crate.outputs.file-path }}
 
       - name: Attach artifact to the release
         uses: softprops/action-gh-release@v2

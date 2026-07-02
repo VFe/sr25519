@@ -18,21 +18,17 @@ defmodule Sr25519.TaxonomyTest do
 
   @tag rung: :L3
   test "single-byte tamper of a good message -> {:ok, false}" do
-    msg = Sr25519.Vectors.unhex(@good["message_hex"])
+    {msg, sig, pk} = Sr25519.Vectors.triple(@good)
     <<first, rest::binary>> = msg
     tampered = <<Bitwise.bxor(first, 1)>> <> rest
-    sig = Sr25519.Vectors.unhex(@good["signature_hex"])
-    pk = Sr25519.Vectors.unhex(@good["public_key_hex"])
     assert Sr25519.Substrate.verify_raw_message(tampered, sig, pk) == {:ok, false}
   end
 
   @tag rung: :L3
   test "single-byte tamper of a good signature -> {:ok, false}" do
-    msg = Sr25519.Vectors.unhex(@good["message_hex"])
-    sig = Sr25519.Vectors.unhex(@good["signature_hex"])
+    {msg, sig, pk} = Sr25519.Vectors.triple(@good)
     <<head::binary-size(10), b, rest::binary>> = sig
     tampered = <<head::binary, Bitwise.bxor(b, 1), rest::binary>>
-    pk = Sr25519.Vectors.unhex(@good["public_key_hex"])
     assert Sr25519.Substrate.verify_raw_message(msg, tampered, pk) == {:ok, false}
   end
 

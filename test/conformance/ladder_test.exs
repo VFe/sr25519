@@ -33,8 +33,15 @@ defmodule Sr25519.Conformance.L2Test do
   @moduletag :conformance
 
   @tag rung: :L2
-  test "the known-answer anchor verifies {:ok, true}" do
-    assert Sr25519.Vectors.run(Sr25519.Vectors.known_answer()) == {:ok, true}
+  test "every known-answer anchor verifies {:ok, true} (incl. lifted published tuples)" do
+    anchors = Sr25519.Vectors.known_answers()
+    # the generated deterministic anchor + the two tuples lifted from the
+    # published scure-sr25519 suite (one signed by real polkadot-js tooling)
+    assert length(anchors) >= 3
+
+    for anchor <- anchors do
+      assert Sr25519.Vectors.run(anchor) == {:ok, true}, "anchor failed: #{anchor["name"]}"
+    end
   end
 
   @tag rung: :L2
@@ -99,9 +106,7 @@ defmodule Sr25519.Conformance.L4Test do
       assert vectors != [], "no #{unquote(name)} vectors in the corpus"
 
       for v <- vectors do
-        msg = Sr25519.Vectors.message(v)
-        sig = Sr25519.Vectors.unhex(v["signature_hex"])
-        pk = Sr25519.Vectors.unhex(v["public_key_hex"])
+        {msg, sig, pk} = Sr25519.Vectors.triple(v)
 
         assert Sr25519.Substrate.verify_raw_message(msg, sig, pk) == {:ok, true}
         assert Sr25519.Substrate.verify_wrapped_bytes(msg, sig, pk) == {:ok, true}
@@ -118,9 +123,7 @@ defmodule Sr25519.Conformance.L4Test do
             &1["expected"])
       )
 
-    msg = Sr25519.Vectors.message(v)
-    sig = Sr25519.Vectors.unhex(v["signature_hex"])
-    pk = Sr25519.Vectors.unhex(v["public_key_hex"])
+    {msg, sig, pk} = Sr25519.Vectors.triple(v)
 
     assert Sr25519.Substrate.verify_raw_message(msg, sig, pk) == {:ok, true}
     assert Sr25519.Substrate.verify_wrapped_bytes(msg, sig, pk) == {:ok, false}
@@ -141,26 +144,28 @@ defmodule Sr25519.Conformance.L5Test do
   end
 
   @tag rung: :L5
-  test "cross-oracle agreement: @scure and substrate-interface both verify the same tuples" do
+  test "cross-oracle agreement: every production signer agrees with the independent oracle" do
     key = fn v -> {v["seed_name"], v["message_name"], v["convention"]} end
 
-    scure =
-      for v <- Sr25519.Vectors.by_tool("scure"), v["expected"], into: %{}, do: {key.(v), v}
+    index = fn tool ->
+      for v <- Sr25519.Vectors.by_tool(tool), v["expected"], into: %{}, do: {key.(v), v}
+    end
 
-    si =
-      for v <- Sr25519.Vectors.by_tool("substrate_interface"),
-          v["expected"],
-          into: %{},
-          do: {key.(v), v}
+    scure = index.("scure")
 
-    shared =
-      MapSet.intersection(MapSet.new(Map.keys(scure)), MapSet.new(Map.keys(si)))
+    # For every tuple the independent oracle (@scure) shares with a
+    # schnorrkel-lineage production signer, BOTH signatures must verify —
+    # convention-correctness across lineages, not mere self-consistency.
+    for tool <- ["substrate_interface", "polkadot_js"] do
+      other = index.(tool)
+      shared = MapSet.intersection(MapSet.new(Map.keys(scure)), MapSet.new(Map.keys(other)))
 
-    assert MapSet.size(shared) > 0, "no shared (seed, message, convention) tuples to compare"
+      assert MapSet.size(shared) > 0, "no shared tuples between scure and #{tool}"
 
-    for k <- shared do
-      assert Sr25519.Vectors.run(scure[k]) == {:ok, true}, "@scure #{inspect(k)}"
-      assert Sr25519.Vectors.run(si[k]) == {:ok, true}, "substrate-interface #{inspect(k)}"
+      for k <- shared do
+        assert Sr25519.Vectors.run(scure[k]) == {:ok, true}, "@scure #{inspect(k)}"
+        assert Sr25519.Vectors.run(other[k]) == {:ok, true}, "#{tool} #{inspect(k)}"
+      end
     end
   end
 

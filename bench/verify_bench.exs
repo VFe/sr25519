@@ -13,9 +13,7 @@ jobs =
       |> Enum.find(&(&1["message_name"] == name and &1["convention"] == "substrate_raw")) ||
         raise "no rust substrate_raw vector for #{name}"
 
-    msg = Sr25519.Vectors.message(v)
-    sig = Sr25519.Vectors.unhex(v["signature_hex"])
-    pk = Sr25519.Vectors.unhex(v["public_key_hex"])
+    {msg, sig, pk} = Sr25519.Vectors.triple(v)
 
     label = "#{name} (#{byte_size(msg)} B)"
     {label, fn -> {:ok, true} = Sr25519.Substrate.verify_raw_message(msg, sig, pk) end}

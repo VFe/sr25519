@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "tool": "scure_published",
+    "tool_version": "paulmillr/scure-sr25519@main test/basic.test.ts",
+    "generator_command": "LIFTED from https://github.com/paulmillr/scure-sr25519/blob/main/test/basic.test.ts ('sign' test ~L204 and 'verify' test ~L217). Immovable known-answer anchors extracted from the independently-audited published suite \u2014 do NOT regenerate or re-derive; see the library plan's bootstrap-anchor requirement.",
+    "note": "The 'verify' tuple is the canonical polkadot-js Alice example: the d43593c7... public key is the well-known //Alice dev key, and the signature was produced by real polkadot-js tooling. Both verify under the substrate context with no wrapping."
+  },
+  "vectors": [
+    {
+      "name": "scure_published:sign:this_is_a_message",
+      "tool": "scure_published",
+      "tool_version": "paulmillr/scure-sr25519@main test/basic.test.ts 'sign'",
+      "generator_command": "lifted from source; deterministic (random = 32 zero bytes)",
+      "backend_version": "published test suite",
+      "seed_hex": "fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e",
+      "message_name": "lifted_sign",
+      "message_hex": "746869732069732061206d657373616765",
+      "semantic_message_note": "utf8 'this is a message' (published deterministic sign vector for pubkey 46ebddef...)",
+      "context_hex": "737562737472617465",
+      "wrapping": "none",
+      "convention": "substrate_raw",
+      "public_key_hex": "46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a",
+      "signature_hex": "dc4831339346dc294d21dd6efa22c078b6eb6602a30fb9c67540c1fb4e20936e17489f36dbe14aec6d2b1e56d979f7b420ca34143aca1691db0bab9535c49a86",
+      "expected": true,
+      "known_answer": true
+    },
+    {
+      "name": "scure_published:verify:alice_control_statement",
+      "tool": "scure_published",
+      "tool_version": "paulmillr/scure-sr25519@main test/basic.test.ts 'verify'",
+      "generator_command": "lifted from source; signature produced by real polkadot-js tooling over the //Alice dev key",
+      "backend_version": "published test suite",
+      "message_name": "lifted_alice_verify",
+      "message_hex": "4920686572656279207665726966792074686174204920636f6e74726f6c203547727776614546357a58623236467a397263517044575335374374455248704e6568584350634e6f48474b75745159",
+      "semantic_message_note": "utf8 'I hereby verify that I control 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY' (canonical Alice example)",
+      "context_hex": "737562737472617465",
+      "wrapping": "none",
+      "convention": "substrate_raw",
+      "public_key_hex": "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d",
+      "signature_hex": "1037eb7e51613d0dcf5930ae518819c87d655056605764840d9280984e1b7063c4566b55bf292fcab07b369d01095879b50517beca4d26e6a65866e25fec0d83",
+      "expected": true,
+      "known_answer": true
+    }
+  ]
+}

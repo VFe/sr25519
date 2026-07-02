@@ -36,20 +36,20 @@ a missing target becomes a consumer-facing download failure.
 mix rustler_precompiled.download Sr25519.Native --all --print
 git add checksum-Elixir.Sr25519.Native.exs
 git commit -m "Add precompiled NIF checksums for vX.Y.Z"
+git push origin main
 ```
 
 This downloads every artifact from the release and records its SHA-256. The Hex
 package is non-functional without this file (it is in the `files:` list and the
 tarball check below asserts it).
 
-Move the tag to the checksum commit so the tag and the published package agree:
-
-```sh
-git tag -f vX.Y.Z && git push -f origin vX.Y.Z
-```
-
-(Artifacts are attached to the GitHub *release*, not the tag object — moving the
-tag does not invalidate them.)
+**Do NOT move the tag onto the checksum commit.** `release.yml` triggers on any
+tag push, so a forced tag update would rebuild all artifacts and overwrite the
+release assets your just-committed checksums were computed from — every
+consumer's download would then fail checksum verification. The checksum commit
+landing on `main` *after* the tag is the normal state for precompiled-NIF
+packages (explorer, tokenizers, etc.): consumers install the Hex tarball, which
+is built from your working tree at publish time and carries the checksum file.
 
 ## 3. Sanity-check the tarball, then publish
 
@@ -67,13 +67,8 @@ package (first publish claims the name) — `mix hex.user register` /
 In a scratch project, add `{:sr25519, "== X.Y.Z"}` (no Rust toolchain, no
 force-build) on at least one Tier-1 platform and run a known-answer verify —
 this exercises the real consumer path: precompiled download + checksum match.
-
-```elixir
-msg = "sr25519 known-answer anchor"
-sig = Base.decode16!("<signature_hex from test/vectors/scure.json known_answer>", case: :lower)
-pk  = Base.decode16!("189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056", case: :lower)
-{:ok, true} = Sr25519.Substrate.verify_raw_message(msg, sig, pk)
-```
+Use the "Prove the install works" snippet from the README verbatim (it is the
+single canonical copy, and a test pins its hex values to the frozen corpus).
 
 Finally: check the HexDocs rendered, and write GitHub release notes from the
 CHANGELOG entry.

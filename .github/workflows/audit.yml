@@ -12,10 +12,17 @@ on:
   schedule:
     - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
 
+permissions:
+  contents: read
+
 jobs:
   cargo-audit:
     name: cargo audit (RustSec advisories)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # rustsec/audit-check reports results as a check run
+      checks: write
     steps:
       - uses: actions/checkout@v4
       - uses: rustsec/audit-check@v2
@@ -28,6 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # If a crate feature ever gates an optional dependency (panic_test
+      # currently gates none), add `arguments: --all-features` so cargo-deny
+      # covers the feature-gated part of the graph too.
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           manifest-path: native/sr25519_nif/Cargo.toml

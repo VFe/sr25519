@@ -1,0 +1,34 @@
+# Dependabot may OPEN update PRs; nothing here (or in repo settings) may ever
+# auto-merge them. A schnorrkel/rustler bump can change verification behavior —
+# every crypto-dependency PR requires a human, a full `mix conformance` run,
+# and a corpus re-validation before merge (see SECURITY.md).
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /native/sr25519_nif
+    schedule:
+      interval: weekly
+    # Surface advisories promptly, but group routine bumps to cut noise.
+    groups:
+      non-crypto:
+        patterns: ["*"]
+        exclude-patterns: ["schnorrkel", "curve25519-dalek", "merlin"]
+    labels: ["dependencies", "crypto-review-required"]
+
+  - package-ecosystem: mix
+    directory: /
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+
+  - package-ecosystem: npm
+    directory: /vectors/node
+    schedule:
+      interval: monthly
+    labels: ["dependencies", "vector-generators"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: ["dependencies", "ci"]

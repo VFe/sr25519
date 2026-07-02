@@ -82,9 +82,7 @@ defmodule Sr25519.NifSafetyTest do
       Sr25519.Vectors.by_tool("rust")
       |> Enum.find(&(&1["message_name"] == "max_bytes" and &1["convention"] == "substrate_raw"))
 
-    msg = Sr25519.Vectors.message(v)
-    sig = Sr25519.Vectors.unhex(v["signature_hex"])
-    pk = Sr25519.Vectors.unhex(v["public_key_hex"])
+    {msg, sig, pk} = Sr25519.Vectors.triple(v)
     assert byte_size(msg) == Sr25519.max_message_bytes()
     assert Sr25519.Substrate.verify_raw_message(msg, sig, pk) == {:ok, true}
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared, frozen spec that every oracle generator (rust_oracle, python/gen.py, node/gen.mjs) reads, so all three sign IDENTICAL (seed, message, convention) tuples. This is what makes cross-oracle agreement (L5) meaningful. max_message_bytes must match native/sr25519_nif/src/lib.rs and Sr25519.max_message_bytes/0 (asserted by an L3 test). A message's optional \"only\" field pins it to a single oracle/seed/convention cell (any subset of those keys).",
+  "_comment": "Shared, frozen spec that every oracle generator reads — vectors/rust_oracle, vectors/python/gen.py, vectors/node/gen.mjs (@scure), and vectors/node/gen_polkadotjs.mjs — so all four sign IDENTICAL (seed, message, convention) tuples. This is what makes cross-oracle agreement (L5) meaningful; regenerate ALL FOUR outputs after editing this file. max_message_bytes must match native/sr25519_nif/src/lib.rs and Sr25519.max_message_bytes/0 (asserted by an L3 test). A message's optional \"only\" field pins it to a subset of oracle/seed/convention cells; a convention's optional \"skip_messages\" excludes messages entirely.",
   "max_message_bytes": 65536,
   "context": "substrate",
   "custom_context": "sr25519-ex-test-context",

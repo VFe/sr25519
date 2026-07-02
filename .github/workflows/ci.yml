@@ -11,6 +11,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: CI only reads the repo.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: conformance (${{ matrix.os }})
@@ -43,14 +47,18 @@ jobs:
         with:
           workspaces: native/sr25519_nif
 
-      - name: Cache mix deps and build
+      # The key embeds the OTP/Elixir versions because dialyzer PLT filenames
+      # do: a toolchain bump with an unchanged mix.lock must not hit a cache
+      # whose PLTs the new toolchain cannot reuse.
+      - name: Cache mix deps, build, and dialyzer PLTs
         uses: actions/cache@v4
         with:
           path: |
             deps
             _build
-          key: mix-${{ runner.os }}-${{ hashFiles('mix.lock') }}
-          restore-keys: mix-${{ runner.os }}-
+            priv/plts
+          key: mix-${{ runner.os }}-otp26.2-elixir1.16.3-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-otp26.2-elixir1.16.3-
 
       - name: Reject panic = "abort" (BEAM VM-safety guard)
         shell: bash
@@ -60,6 +68,15 @@ jobs:
           fi
           grep -qE 'panic *= *"unwind"' native/sr25519_nif/Cargo.toml || {
             echo "::error::[profile.release] panic = \"unwind\" is required"; exit 1; }
+
+      - name: Lockfile integrity (reproducible native build)
+        shell: bash
+        run: |
+          # rustler does not pass --locked to cargo, so builds silently consume
+          # whatever Cargo.lock resolves to; this guard fails the build if the
+          # committed lockfile is stale relative to Cargo.toml.
+          cargo metadata --locked --format-version 1 --manifest-path native/sr25519_nif/Cargo.toml > /dev/null
+          cargo metadata --locked --format-version 1 --manifest-path vectors/rust_oracle/Cargo.toml > /dev/null
 
       - name: Fetch deps
         run: mix deps.get

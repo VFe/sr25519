@@ -13,9 +13,15 @@ defmodule Sr25519.MixProject do
       description: description(),
       package: package(),
       deps: deps(),
-      # :mix must be in the PLT because lib/mix/tasks/conformance.ex (dev-only,
-      # not shipped) implements a Mix.Task.
-      dialyzer: [plt_add_apps: [:mix]],
+      # :mix in the PLT because lib/mix/tasks/conformance.ex (dev-only, not
+      # shipped) implements a Mix.Task. PLTs live under priv/plts (gitignored,
+      # never packaged) so CI can cache them — dialyxir's default puts the
+      # expensive core PLTs in ~/.mix, outside any cache.
+      dialyzer: [
+        plt_add_apps: [:mix],
+        plt_core_path: "priv/plts/core",
+        plt_local_path: "priv/plts/project"
+      ],
       docs: docs(),
       name: "sr25519",
       source_url: @source_url

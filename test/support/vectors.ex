@@ -26,10 +26,21 @@ defmodule Sr25519.Vectors do
   @doc "The shared corpus spec (seeds, messages, conventions, MAX_MESSAGE_BYTES)."
   def spec, do: @spec_path |> File.read!() |> Jason.decode!()
 
-  @doc "The frozen, deterministic known-answer anchor (independent @scure oracle)."
+  @doc "All frozen known-answer anchors (generated deterministic + lifted published tuples)."
+  def known_answers do
+    case Enum.filter(all(), &(&1["known_answer"] == true)) do
+      [] -> raise "no known-answer vectors present in corpus"
+      anchors -> anchors
+    end
+  end
+
+  @doc """
+  The primary known-answer anchor: the deterministic @scure-generated vector over
+  the shared corpus seed (stable choice — several tests tamper with it byte-wise).
+  """
   def known_answer do
-    all() |> Enum.find(&(&1["known_answer"] == true)) ||
-      raise "no known-answer vector present in corpus"
+    Enum.find(known_answers(), &(&1["seed_name"] == "seed_ones")) ||
+      raise "no seed_ones known-answer anchor present in corpus"
   end
 
   @doc """
@@ -48,6 +59,15 @@ defmodule Sr25519.Vectors do
       "raw_context" -> Sr25519.verify_raw(msg, sig, pk, ctx)
       other -> raise "unknown convention #{inspect(other)} in vector #{v["name"]}"
     end
+  end
+
+  @doc """
+  The decoded `{message, signature, public_key}` triple of a vector record —
+  the one place record-shape knowledge (compact `message_repeat`, hex casing)
+  lives, so tests never hand-decode fields.
+  """
+  def triple(v) do
+    {message(v), unhex(v["signature_hex"]), unhex(v["public_key_hex"])}
   end
 
   @doc """

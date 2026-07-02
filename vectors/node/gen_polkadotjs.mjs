@@ -11,47 +11,19 @@
 //
 // Usage: node vectors/node/gen_polkadotjs.mjs  (writes test/vectors/polkadot_js.json)
 import { cryptoWaitReady, sr25519PairFromSeed, sr25519Sign, sr25519Verify } from '@polkadot/util-crypto';
-import { u8aWrapBytes } from '@polkadot/util';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { enc, toHex, fromHex, loadSpec, messageBytes, applyWrap, messageIncluded } from './spec_common.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
-const spec = JSON.parse(readFileSync(join(ROOT, 'vectors', 'corpus_spec.json'), 'utf8'));
+const spec = loadSpec(ROOT);
 const pkgVersion = JSON.parse(
   readFileSync(join(HERE, 'node_modules', '@polkadot', 'util-crypto', 'package.json'), 'utf8')
 ).version;
 
-const enc = new TextEncoder();
-const toHex = (u) => Buffer.from(u).toString('hex');
-function fromHex(h) {
-  if (!/^([0-9a-f]{2})*$/.test(h)) throw new Error('invalid hex in spec: ' + JSON.stringify(h));
-  return Uint8Array.from(Buffer.from(h, 'hex'));
-}
 const GEN_CMD = 'node vectors/node/gen_polkadotjs.mjs';
-
-function messageBytes(m) {
-  if (m.utf8 !== undefined) return enc.encode(m.utf8);
-  if (m.hex !== undefined) return fromHex(m.hex);
-  if (m.repeat_hex !== undefined) return new Uint8Array(m.count).fill(parseInt(m.repeat_hex, 16));
-  throw new Error('bad message spec: ' + m.name);
-}
-function applyWrap(bytes, wrapping) {
-  if (wrapping === 'none') return bytes;
-  // The exact polkadot-js extension signRaw wrapping (conditional passthrough).
-  if (wrapping === 'bytes_xml') return u8aWrapBytes(bytes);
-  throw new Error('unknown wrapping ' + wrapping);
-}
-function messageApplies(m, oracle, seedName, convName) {
-  const o = m.only;
-  if (!o) return true;
-  return (
-    (!o.oracle || o.oracle === oracle) &&
-    (!o.seed_name || o.seed_name === seedName) &&
-    (!o.convention || o.convention === convName)
-  );
-}
 
 await cryptoWaitReady();
 
@@ -79,7 +51,7 @@ for (const conv of spec.conventions) {
   for (const seedName of Object.keys(keypairs)) {
     const kp = keypairs[seedName];
     for (const m of spec.messages) {
-      if (!messageApplies(m, 'polkadot_js', seedName, conv.name)) continue;
+      if (!messageIncluded(m, conv, 'polkadot_js', seedName)) continue;
       const msg = messageBytes(m);
       const signed = applyWrap(msg, conv.wrapping);
       const sig = sr25519Sign(signed, kp.pair);

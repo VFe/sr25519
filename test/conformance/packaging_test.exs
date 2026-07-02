@@ -63,5 +63,34 @@ defmodule Sr25519.Conformance.L7Test do
     # (broken) in every consumer's `mix help`.
     refute Enum.any?(files, &String.contains?(&1, "lib/mix")),
            "package tarball must not ship lib/mix (dev-only task leaked)"
+
+    # The files: list enumerates lib paths (to exclude lib/mix), so a future
+    # module added under lib/ outside those paths would silently not ship.
+    # Assert completeness dynamically: every source file under lib/ except
+    # lib/mix must be in the tarball.
+    expected_lib =
+      Path.wildcard(Path.join(@root, "lib/**/*.ex"))
+      |> Enum.map(&Path.relative_to(&1, @root))
+      |> Enum.reject(&String.starts_with?(&1, "lib/mix"))
+
+    for source <- expected_lib do
+      assert source in files,
+             "#{source} exists in lib/ but is missing from the tarball — " <>
+               "extend the files: list in mix.exs"
+    end
+  end
+
+  @tag rung: :L7
+  test "the precompile target list matches the release workflow matrix" do
+    workflow = File.read!(Path.join(@root, ".github/workflows/release.yml"))
+
+    matrix_targets =
+      Regex.scan(~r/^\s+-\s+\{\s*target:\s*([a-z0-9_-]+)\s*,/m, workflow)
+      |> Enum.map(fn [_, t] -> t end)
+      |> Enum.sort()
+
+    assert matrix_targets == Enum.sort(Sr25519.Native.targets()),
+           "release.yml matrix and Sr25519.Native targets have drifted — " <>
+             "they must change together (a missing target becomes a consumer download failure)"
   end
 end

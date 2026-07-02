@@ -7,61 +7,27 @@
 // message directly. Signing is made deterministic by passing a fixed `random`,
 // so the emitted corpus is byte-reproducible.
 //
-// The <Bytes> wrapping comes from @polkadot/util's u8aWrapBytes — the actual
-// production function behind polkadot-js signRaw — so at least one oracle
-// derives the wrapping from the real implementation rather than a local
-// restatement (a consistent transcription error across hand-typed copies would
-// otherwise pass every rung and only fail against production signatures).
+// The <Bytes> wrapping comes from @polkadot/util's u8aWrapBytes (via
+// spec_common.mjs) — the actual production function behind polkadot-js signRaw —
+// so the wrapping derives from the real implementation rather than a local
+// restatement.
 //
 // Usage: node vectors/node/gen.mjs  (writes test/vectors/scure.json)
 import * as scure from '@scure/sr25519';
-import { u8aWrapBytes } from '@polkadot/util';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { enc, toHex, fromHex, loadSpec, messageBytes, applyWrap, messageIncluded } from './spec_common.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
-const spec = JSON.parse(readFileSync(join(ROOT, 'vectors', 'corpus_spec.json'), 'utf8'));
+const spec = loadSpec(ROOT);
 const pkgVersion = JSON.parse(
   readFileSync(join(HERE, 'node_modules', '@scure', 'sr25519', 'package.json'), 'utf8')
 ).version;
 
-const enc = new TextEncoder();
-const toHex = (u) => Buffer.from(u).toString('hex');
-// Strict hex decode: Buffer.from(h, 'hex') silently truncates at the first
-// invalid character, which would make this oracle sign the wrong bytes while
-// looking plausible — validate first.
-function fromHex(h) {
-  if (!/^([0-9a-f]{2})*$/.test(h)) throw new Error('invalid hex in spec: ' + JSON.stringify(h));
-  return Uint8Array.from(Buffer.from(h, 'hex'));
-}
 const FIXED_RANDOM = new Uint8Array(32); // deterministic signatures
 const GEN_CMD = 'node vectors/node/gen.mjs';
-
-function messageBytes(m) {
-  if (m.utf8 !== undefined) return enc.encode(m.utf8);
-  if (m.hex !== undefined) return fromHex(m.hex);
-  if (m.repeat_hex !== undefined) return new Uint8Array(m.count).fill(parseInt(m.repeat_hex, 16));
-  throw new Error('bad message spec: ' + m.name);
-}
-function applyWrap(bytes, wrapping) {
-  if (wrapping === 'none') return bytes;
-  // The real polkadot-js signRaw wrapping (conditional passthrough included).
-  if (wrapping === 'bytes_xml') return u8aWrapBytes(bytes);
-  throw new Error('unknown wrapping ' + wrapping);
-}
-// A message may pin itself to a single (oracle, seed, convention) cell — e.g. the
-// bulky exactly-MAX vector, which only one oracle needs to emit.
-function messageApplies(m, oracle, seedName, convName) {
-  const o = m.only;
-  if (!o) return true;
-  return (
-    (!o.oracle || o.oracle === oracle) &&
-    (!o.seed_name || o.seed_name === seedName) &&
-    (!o.convention || o.convention === convName)
-  );
-}
 
 const keypairs = Object.fromEntries(spec.seeds.map((s) => {
   const secret = scure.secretFromSeed(fromHex(s.hex));
@@ -87,8 +53,7 @@ for (const conv of spec.conventions) {
   for (const seedName of Object.keys(keypairs)) {
     const kp = keypairs[seedName];
     for (const m of spec.messages) {
-      if ((conv.skip_messages || []).includes(m.name)) continue;
-      if (!messageApplies(m, 'scure', seedName, conv.name)) continue;
+      if (!messageIncluded(m, conv, 'scure', seedName)) continue;
       const msg = messageBytes(m);
       const signed = applyWrap(msg, conv.wrapping);
       const sig = scure.sign(kp.secret, signed, FIXED_RANDOM);

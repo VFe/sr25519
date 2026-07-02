@@ -172,17 +172,22 @@ metrics/alerting, not control flow.
 ## Correctness & safety
 
 Correctness is defined by **real-world vectors**, not prose. The vector corpus in
-`test/vectors/` is generated from independent oracles and frozen:
+`test/vectors/` is generated from four oracles and frozen:
 
 - **`substrate-interface`** (Python) — the real production signer for Substrate/Bittensor.
 - **`@polkadot/util-crypto`** (polkadot-js wasm-crypto + the exact `u8aWrapBytes`
   `signRaw` flow) — where most real-world dapp signatures come from.
-- **`@scure/sr25519`** (pure-JS noble, independently audited) — the genuinely
-  independent oracle that proves the convention is *right*, not merely self-consistent.
+- **`@scure/sr25519`** (pure-JS noble, independently audited) — the one oracle of
+  **genuinely independent lineage**: the other three all descend from the w3f
+  `schnorrkel` code, so only @scure proves the convention is *right* rather than
+  merely self-consistent.
 - **the `schnorrkel` crate** (Rust) — confirms the wrapper behaves as the crate it wraps.
 
-All four independently derive the **same keypair** from a shared seed, and their
-signatures all verify through this library (cross-oracle agreement).
+All four derive the **same keypair** from a shared seed, every production
+signer's signatures verify alongside @scure's over identical tuples
+(cross-oracle agreement), and the corpus carries known-answer anchors lifted
+verbatim from the published scure-sr25519 test suite — including the canonical
+polkadot-js Alice vector.
 
 Safety properties are enforced, not assumed:
 
@@ -208,12 +213,16 @@ treated as breaking and versioned deliberately. See [CHANGELOG.md](CHANGELOG.md)
 ## Troubleshooting
 
 - **`Rustler dependency is needed to force the build`** — you enabled the
-  force-build path without the optional dep; add `{:rustler, "~> 0.38"}` to your
-  own `deps` (Hex does not fetch optional dependencies transitively).
+  force-build path without the `rustler` dep; see
+  [Install](#install) for the exact line to add.
 - **`Error while downloading precompiled NIF … 404`** — the target/NIF-version
   combination has no published artifact. Either your platform is not in the
-  table above (use `SR25519_FORCE_BUILD=1` with a Rust toolchain), or the
-  version was published without that artifact — please open an issue.
+  table above (compile from source per [Install](#install)), or the version was
+  published without that artifact — please open an issue.
+- **Setting `SR25519_FORCE_BUILD=1` after `:sr25519` already compiled does
+  nothing** — env vars aren't tracked by the compiler; run
+  `mix deps.clean sr25519` first. (The `config :rustler_precompiled` form
+  recompiles automatically.)
 
 ## License
 

@@ -24,27 +24,28 @@ defmodule Sr25519.Native do
     x86_64-unknown-linux-musl
   )
 
-  # Only pass :force_build when the env var actually asks for it — an explicit
-  # `force_build: false` would override (Keyword.put_new) the
-  # `config :rustler_precompiled, :force_build, sr25519: true` fallback that
-  # rustler_precompiled's own error messages tell consumers to use.
-  opts = [
-    otp_app: :sr25519,
-    crate: "sr25519_nif",
-    base_url: "#{source_url}/releases/download/v#{version}",
-    version: version,
-    targets: @targets,
-    nif_versions: ["2.15"]
-  ]
+  @doc false
+  # Exposed so the conformance suite can assert this list stays in lockstep
+  # with the release workflow's build matrix.
+  def targets, do: @targets
 
-  opts =
-    if System.get_env("SR25519_FORCE_BUILD") in ["1", "true"] do
-      [{:force_build, true} | opts]
-    else
-      opts
-    end
-
-  use RustlerPrecompiled, opts
+  # INVARIANT: the :force_build key is present ONLY when the env var asks for a
+  # build — an explicit `force_build: false` would override (Keyword.put_new)
+  # the `config :rustler_precompiled, :force_build, sr25519: true` fallback
+  # that rustler_precompiled's own error messages tell consumers to use.
+  use RustlerPrecompiled,
+      [
+        otp_app: :sr25519,
+        crate: "sr25519_nif",
+        base_url: "#{source_url}/releases/download/v#{version}",
+        version: version,
+        targets: @targets,
+        nif_versions: ["2.15"]
+      ] ++
+        if(System.get_env("SR25519_FORCE_BUILD") in ["1", "true"],
+          do: [force_build: true],
+          else: []
+        )
 
   # Fallback bodies; replaced by the loaded NIF. If loading failed you get a
   # clear `:nif_not_loaded` rather than a silent wrong answer.

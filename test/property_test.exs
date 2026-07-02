@@ -54,9 +54,7 @@ defmodule Sr25519.PropertyTest do
 
   @tag rung: :L6
   property "∀ single-byte tamper of a good message → {:ok, false}" do
-    msg = Sr25519.Vectors.unhex(@good["message_hex"])
-    sig = Sr25519.Vectors.unhex(@good["signature_hex"])
-    pk = Sr25519.Vectors.unhex(@good["public_key_hex"])
+    {msg, sig, pk} = Sr25519.Vectors.triple(@good)
     size = byte_size(msg)
 
     check all(
@@ -71,9 +69,7 @@ defmodule Sr25519.PropertyTest do
 
   @tag rung: :L6
   property "∀ single-byte tamper of a good signature → {:ok, false}" do
-    msg = Sr25519.Vectors.unhex(@good["message_hex"])
-    sig = Sr25519.Vectors.unhex(@good["signature_hex"])
-    pk = Sr25519.Vectors.unhex(@good["public_key_hex"])
+    {msg, sig, pk} = Sr25519.Vectors.triple(@good)
 
     check all(
             idx <- StreamData.integer(0..63),
