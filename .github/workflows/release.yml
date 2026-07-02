@@ -76,7 +76,7 @@ jobs:
       # each precompiled NIF was built by this workflow from this commit via
       # `gh attestation verify <artifact> --repo VFe/sr25519`.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: ${{ steps.build-crate.outputs.file-path }}
 
