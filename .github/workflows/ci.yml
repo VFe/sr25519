@@ -51,7 +51,7 @@ jobs:
       # do: a toolchain bump with an unchanged mix.lock must not hit a cache
       # whose PLTs the new toolchain cannot reuse.
       - name: Cache mix deps, build, and dialyzer PLTs
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             deps
