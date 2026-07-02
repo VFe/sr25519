@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload conformance report
         if: ${{ always() && matrix.full }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: conformance-report-${{ matrix.os }}
           path: conformance_report.json
