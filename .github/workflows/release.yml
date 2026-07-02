@@ -17,6 +17,11 @@ jobs:
   build_release:
     name: ${{ matrix.job.target }} (nif ${{ matrix.nif }})
     runs-on: ${{ matrix.job.os }}
+    # Deployment gate: once the `release` environment is configured with a
+    # required reviewer (see RELEASING.md "Required repository settings"), a
+    # human must approve before any release job runs. Auto-created unprotected
+    # on first use if the environment does not exist yet.
+    environment: release
     permissions:
       # attach artifacts to the GitHub release
       contents: write
@@ -41,7 +46,9 @@ jobs:
           - { target: x86_64-pc-windows-gnu, os: windows-2022 }
           - { target: x86_64-pc-windows-msvc, os: windows-2022 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Extract project version
         shell: bash
@@ -63,7 +70,7 @@ jobs:
 
       - name: Build the NIF
         id: build-crate
-        uses: philss/rustler-precompiled-action@v1.1.5
+        uses: philss/rustler-precompiled-action@67ed0cc2d6a423e4c4cd9ad651dcc6c90f802cdb # v1.1.5
         with:
           project-name: sr25519_nif
           project-version: ${{ env.PROJECT_VERSION }}
@@ -76,12 +83,12 @@ jobs:
       # each precompiled NIF was built by this workflow from this commit via
       # `gh attestation verify <artifact> --repo VFe/sr25519`.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-path: ${{ steps.build-crate.outputs.file-path }}
 
       - name: Attach artifact to the release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ${{ steps.build-crate.outputs.file-path }}

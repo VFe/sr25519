@@ -9,7 +9,11 @@ as potentially breaking and versioned deliberately.
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-07-01
+## [0.1.0] - 2026-07-02
+
+The first public release: the verification-only core, plus a pre-publish
+security-hardening pass (no vulnerabilities found; all hardening changes are
+defense-in-depth or supply-chain robustness).
 
 ### Added
 - **Verification-only v0.1 core.**
@@ -36,6 +40,55 @@ as potentially breaking and versioned deliberately.
   and a p99 < 1 ms latency gate.
 - Precompiled distribution via `rustler_precompiled` with a `SR25519_FORCE_BUILD`
   source-build escape hatch.
+- **`release-verify.yml`** — a pre-publish gate triggered by the checksum
+  commit: committed checksums must exactly match the GitHub release assets
+  (both directions), every asset's build-provenance attestation is verified
+  against `release.yml`, and the real consumer install path (precompiled
+  download + checksum verification + NIF load + known-answer verifies) is
+  exercised on Linux/macOS/Windows.
+- **All GitHub Actions pinned to commit SHAs** (with dependabot-refreshed
+  version comments); `persist-credentials: false` on every checkout; `zizmor`
+  workflow linting and an OpenSSF Scorecard workflow.
+- Elixir-side advisory scanning in CI (`mix hex.audit` + `mix deps.audit` via
+  `mix_audit`).
+- Dependabot coverage for the vector-generator manifests
+  (`vectors/rust_oracle` cargo, `vectors/python` pip) and a pinned
+  `vectors/python/requirements.txt` matching the frozen corpus metadata.
+- `.github/CODEOWNERS`; the release job targets a protectable `release`
+  environment; RELEASING.md documents the required one-time repository
+  settings and gates publishing on `Release verify` being green.
+- README section **"Verifying release artifacts"** (trust chain,
+  `gh attestation verify` instructions, residual-trust statement).
+- Tests: 1 MiB signature/public-key cheap rejection, `Sr25519.Substrate`
+  non-binary `:invalid_type` coverage, direct-NIF `ArgumentError` boundary
+  contract, and direct-NIF wrong-length backstop coverage.
+
+### Changed
+- **`verify_raw` now runs on a dirty CPU scheduler.** The 64 KiB cap-sized
+  transcript absorb could exceed the BEAM's ~1 ms regular-scheduler guideline
+  on slow release targets (armv7, riscv64); scheduler fairness no longer
+  depends on verify latency. The p99 < 1 ms benchmark stays as a
+  perf-regression gate. Verification behavior is unchanged.
+- **schnorrkel is built with `default-features = false` (`alloc`)**: the OS-RNG
+  stack (`getrandom`, `rand`, `rand_chacha`, `ppv-lite86`, `zerocopy`, `aead`,
+  `wasi`) is no longer linked into the verify-only NIF — 8 fewer supply-chain
+  crates. Proven behavior-identical by the frozen vector corpus.
+- `Sr25519.verify_raw/4` rejects wrong-length signatures/public keys before
+  calling the NIF (the Rust checks remain the authoritative backstop, still
+  covered by direct-NIF tests).
+- The release profile builds with `overflow-checks = true` (an overflow panics
+  and unwinds into a typed error instead of silently wrapping).
+- `cargo-deny` now **fails** on duplicate crate versions (was: warn).
+
+### Fixed
+- SECURITY.md claimed builds use `--locked`; the actual mechanism is a
+  `cargo metadata --locked` integrity gate in CI and release (rustler does not
+  pass `--locked` to cargo).
+- README/moduledoc/package wording no longer reads as if this wrapper were
+  audited — `schnorrkel` is audited upstream; the wrapper is human-reviewed.
+- Documented that legacy pre-0.8 unmarked schnorrkel signatures verify as
+  `{:ok, false}` (the deprecated `preaudit_deprecated` encoding is deliberately
+  not enabled).
 
 [Unreleased]: https://github.com/VFe/sr25519/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/VFe/sr25519/commits/v0.1.0

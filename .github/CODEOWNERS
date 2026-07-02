@@ -1,0 +1,4 @@
+# Every change requires the maintainer's review once branch protection enables
+# "Require review from Code Owners" (see RELEASING.md, "Required repository
+# settings"). Until then this file is documentation, not enforcement.
+* @VFe

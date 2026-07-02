@@ -12,7 +12,7 @@ security review (see `SECURITY.md`).
 | Never normalize/decode/canonicalize input in the crypto core | The NIF takes raw binaries only; every convention lives in `Sr25519.Substrate`, named and vector-backed |
 | Never let a panic cross the NIF boundary | `panic = "unwind"` + `#![forbid(unsafe_code)]` + `compile_error!` under `cfg(panic = "abort")` + CI grep + separate-OS-process panic test |
 | Never accept unvalidated lengths | Rust length checks before `schnorrkel` is touched (L3-tested, incl. a direct-NIF bypass test) |
-| Never verify an unbounded message | `max_message_bytes/0` (64 KiB) + `max_context_bytes/0` (1 KiB) caps, both Rust-backstopped; p99 < 1 ms gate |
+| Never verify an unbounded message | `max_message_bytes/0` (64 KiB) + `max_context_bytes/0` (1 KiB) caps, both Rust-backstopped; DirtyCpu scheduler; p99 < 1 ms perf-regression gate |
 | Never ship without the checksum file | In the package `files:` list; `mix hex.build` refuses without it; L7 asserts it |
 | Never hand-roll curve math | The Rust core is input validation + `schnorrkel` calls only |
 | Never weaken a vector to pass CI | Corpus is frozen and committed; regeneration is deliberate and reviewed |
@@ -43,9 +43,14 @@ required for byte-exact interop, and the passthrough cases are vector-backed.
 All rules implemented and tested (rungs L3/L6): typed results everywhere,
 deliberate-panic survival in a separate BEAM OS process, StreamData fuzzing
 (cargo-fuzz optional per plan — not added), p99 benchmark gate, static guards.
-One plan item is environment-dependent: the p99 gate has run on CI runners and
-this build container, not yet on a **production-like machine** — run it there
-before relying on the latency bound in production capacity planning.
+Post-review hardening moved `verify_raw` to a **dirty CPU scheduler**: the
+64 KiB cap-sized transcript absorb could exceed the ~1 ms regular-scheduler
+guideline on the slower release targets (armv7, riscv64), so scheduler fairness
+no longer depends on the latency bound at all. One plan item remains
+environment-dependent: the p99 gate — now a perf-regression bound — has run on
+CI runners and this build container, not yet on a **production-like machine**;
+run it there before relying on the latency bound in production capacity
+planning.
 
 ## Build & distribution (§6)
 
@@ -66,7 +71,9 @@ lockfile.
 cross-compiled targets are built (10/10 proven green) and their naming +
 checksums are validated by the release checksum step. Per-target *load*
 smoke-tests under emulation (qemu) were **not** implemented — deviation
-accepted for v0.1; the checksum download step catches artifact-shape problems.
+accepted for v0.1; the checksum download step catches artifact-shape problems,
+and `release-verify.yml`'s consumer-install job now load-smokes the three
+native OS families through the real precompiled-download path before publish.
 
 ## Verification spine (§8)
 
@@ -105,10 +112,19 @@ CHANGELOG; **Dependabot configured to open PRs with auto-merge prohibited**
 ## Supply-chain posture (beyond the plan)
 
 - Signed **build-provenance attestations** on every release artifact
-  (`gh attestation verify <artifact> --repo VFe/sr25519`).
-- Least-privilege `permissions:` on all workflows.
+  (`gh attestation verify <artifact> --repo VFe/sr25519`), now **enforced**
+  pre-publish by `release-verify.yml` (checksums ≡ assets, attestation on every
+  asset, real consumer-install smoke on three OS families).
+- Least-privilege `permissions:` on all workflows; checkouts use
+  `persist-credentials: false`.
+- Every GitHub Action `uses:` reference is **pinned to a commit SHA** with a
+  dependabot-refreshed version comment (the former follow-up, done);
+  `zizmor` lints the workflows in CI and OpenSSF Scorecard runs weekly.
 - Lockfiles committed for every ecosystem (cargo, mix, npm generators), oracle
-  generator dependencies exact-pinned.
-- **Follow-up for the maintainer:** pin GitHub Actions `uses:` references to
-  commit SHAs (e.g. with `pin-github-action`); not possible from the build
-  environment that authored this repo.
+  generator dependencies exact-pinned — including `vectors/python/requirements.txt`
+  matching the versions recorded in the frozen corpus metadata; dependabot
+  watches all generator manifests.
+- The verify-only NIF builds schnorrkel with `default-features = false`
+  (`alloc`): no `getrandom`/`rand` OS-RNG stack is linked at all.
+- Elixir-side advisory scanning (`mix hex.audit`, `mix deps.audit`) alongside
+  `cargo audit`/`cargo deny`; duplicate crate versions are a hard `deny`.

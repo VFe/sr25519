@@ -44,8 +44,8 @@ defmodule Sr25519.MixProject do
 
   defp description do
     "Substrate-compatible sr25519 (schnorrkel) signature verification for the BEAM — " <>
-      "a thin, safety-critical Rustler NIF over the audited w3f schnorrkel crate. " <>
-      "Precompiled by default; no Rust toolchain required to use it."
+      "a thin, safety-critical Rustler NIF over the upstream-audited w3f schnorrkel " <>
+      "crate. Precompiled by default; no Rust toolchain required to use it."
   end
 
   defp deps do
@@ -57,6 +57,9 @@ defmodule Sr25519.MixProject do
       {:stream_data, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.3", only: [:dev, :test]},
       {:dialyxir, "~> 1.4", only: :dev, runtime: false},
+      # Elixir-side advisory scanning (`mix deps.audit`), run in audit.yml —
+      # the BEAM analogue of cargo-audit for the Rust tree.
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       # NOTE: no direct jason dep — the conformance report + vector loader use
       # Jason, which arrives transitively via rustler; declaring it here would
       # make it a hard runtime dep of every consumer for nothing.

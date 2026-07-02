@@ -5,7 +5,9 @@ defmodule Sr25519.NifSafetyTest do
     * a deliberate NIF panic is survived (panic = "unwind"), proven in a separate
       BEAM OS process so an abort would take down only the child;
     * garbage input never panics/aborts — always a typed return;
-    * verify is bounded: p99 < 1 ms at MAX_MESSAGE_BYTES (tagged :benchmark).
+    * verify stays fast: p99 < 1 ms at MAX_MESSAGE_BYTES (a perf-regression
+      gate — the NIF runs on a dirty CPU scheduler, so scheduler safety no
+      longer depends on this bound; tagged :benchmark).
   """
   use ExUnit.Case, async: false
   @moduletag :conformance
@@ -77,7 +79,7 @@ defmodule Sr25519.NifSafetyTest do
   @tag rung: :L6
   @tag :benchmark
   @tag timeout: 120_000
-  test "p99 verify latency < 1 ms at MAX_MESSAGE_BYTES" do
+  test "p99 verify latency < 1 ms at MAX_MESSAGE_BYTES (perf-regression gate)" do
     v =
       Sr25519.Vectors.by_tool("rust")
       |> Enum.find(&(&1["message_name"] == "max_bytes" and &1["convention"] == "substrate_raw"))
@@ -101,7 +103,7 @@ defmodule Sr25519.NifSafetyTest do
     p50 = Enum.at(sorted, div(length(sorted), 2))
 
     IO.puts("  verify @#{byte_size(msg)}B: p50=#{us(p50)}µs p99=#{us(p99)}µs")
-    assert p99 < 1_000_000, "p99 = #{us(p99)} µs exceeds the 1 ms NIF budget"
+    assert p99 < 1_000_000, "p99 = #{us(p99)} µs exceeds the 1 ms perf-regression budget"
   end
 
   defp us(ns), do: Float.round(ns / 1000, 1)

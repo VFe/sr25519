@@ -6,7 +6,9 @@ on:
       - "native/**/Cargo.toml"
       - "native/**/Cargo.lock"
       - "native/**/deny.toml"
-      - ".github/workflows/audit.yml"
+      - "mix.exs"
+      - "mix.lock"
+      - ".github/workflows/*.yml"
   pull_request:
   workflow_dispatch:
   schedule:
@@ -24,8 +26,10 @@ jobs:
       # rustsec/audit-check reports results as a check run
       checks: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: native/sr25519_nif
@@ -34,10 +38,45 @@ jobs:
     name: cargo deny (advisories + licenses + sources)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       # If a crate feature ever gates an optional dependency (panic_test
       # currently gates none), add `arguments: --all-features` so cargo-deny
       # covers the feature-gated part of the graph too.
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.20
         with:
           manifest-path: native/sr25519_nif/Cargo.toml
+
+  mix-audit:
+    name: mix deps.audit + hex.audit (Elixir advisories)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Set up Elixir/OTP
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: "26.2"
+          elixir-version: "1.16.3"
+      - name: Fetch deps
+        run: mix deps.get
+      - name: Retired/security-flagged Hex packages
+        run: mix hex.audit
+      - name: Elixir dependency advisories (mix_audit)
+        run: mix deps.audit
+
+  zizmor:
+    name: zizmor (workflow security lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      # Version-pinned install; keep in sync manually (zizmor is a lint gate,
+      # not part of the build, so a stale pin fails safe).
+      - name: Run zizmor over all workflows
+        run: |
+          pipx install zizmor==1.26.1
+          zizmor --min-severity medium .github/workflows/

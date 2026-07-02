@@ -34,11 +34,13 @@ mod atoms {
     }
 }
 
-/// Hard caps on what gets absorbed into the Merlin transcript. An unbounded
-/// binary could block the BEAM scheduler (Erlang's ~1 ms NIF guideline); the
-/// context gets its own small cap so the total stays at the benchmarked bound
-/// rather than doubling it. Kept in sync with `Sr25519.max_message_bytes/0`
-/// and `Sr25519.max_context_bytes/0` (asserted equal by the test suite).
+/// Hard caps on what gets absorbed into the Merlin transcript. `verify_raw`
+/// runs on a dirty CPU scheduler (see below), so these are a per-call work/DoS
+/// bound and a stable part of the error contract — not a regular-scheduler
+/// latency requirement. The context gets its own small cap because real signing
+/// contexts are short domain labels. Kept in sync with
+/// `Sr25519.max_message_bytes/0` / `Sr25519.max_context_bytes/0` (asserted
+/// equal by the test suite).
 const MAX_MESSAGE_BYTES: usize = 65_536;
 const MAX_CONTEXT_BYTES: usize = 1_024;
 
@@ -57,7 +59,14 @@ const SIGNATURE_BYTES: usize = 64;
 ///   * `{:error, :message_too_large}`  — message exceeds MAX_MESSAGE_BYTES
 ///   * `{:error, :context_too_large}`  — context exceeds MAX_CONTEXT_BYTES
 ///   * `{:error, :invalid_public_key}` — pubkey schnorrkel rejects structurally
-#[rustler::nif]
+///
+/// DirtyCpu: a cap-sized (64 KiB) transcript absorb plus the double-scalar
+/// multiply is ~1 ms-class on fast x86_64/aarch64, but can exceed the BEAM's
+/// ~1 ms regular-scheduler guideline on the slower release targets (armv7
+/// gnueabihf, riscv64). A dirty scheduler removes scheduler-starvation risk on
+/// every target for a microsecond-level dispatch cost — noise next to the
+/// ≥ ~100 µs the curve math always costs.
+#[rustler::nif(schedule = "DirtyCpu")]
 fn verify_raw<'a>(
     env: Env<'a>,
     message: Binary<'a>,

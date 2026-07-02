@@ -25,9 +25,11 @@ allow = [
 confidence-threshold = 0.9
 
 [bans]
-# A NIF that pulls a duplicate curve/crypto crate version is worth a human look,
-# but duplicates elsewhere are common and non-fatal.
-multiple-versions = "warn"
+# The graph currently has ZERO duplicate crate versions; a new duplicate —
+# especially of a curve/crypto crate — is a supply-chain event that deserves a
+# human decision, not a warning nobody reads. Add a targeted `skip` here if a
+# benign duplicate ever needs to be waved through.
+multiple-versions = "deny"
 wildcards = "deny"
 
 [sources]

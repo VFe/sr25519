@@ -1,4 +1,5 @@
-# Human-facing verify benchmark (the hard p99 < 1 ms gate lives in the test suite).
+# Human-facing verify benchmark (the p99 < 1 ms perf-regression gate lives in
+# the test suite; the NIF runs on a dirty CPU scheduler).
 #
 #   MIX_ENV=test SR25519_FORCE_BUILD=1 mix run bench/verify_bench.exs
 #

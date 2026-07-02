@@ -31,19 +31,25 @@ jobs:
     env:
       SR25519_FORCE_BUILD: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Set up Elixir/OTP
-        uses: erlef/setup-beam@v1
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           otp-version: "26.2"
           elixir-version: "1.16.3"
 
+      # SHA-pinned to master (no semver tags on this action); normally the ref
+      # selects the toolchain, so with a SHA pin the toolchain must be explicit.
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: stable
 
       - name: Cache cargo registry and NIF target
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           workspaces: native/sr25519_nif
 
@@ -51,7 +57,7 @@ jobs:
       # do: a toolchain bump with an unchanged mix.lock must not hit a cache
       # whose PLTs the new toolchain cannot reuse.
       - name: Cache mix deps, build, and dialyzer PLTs
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             deps
@@ -99,7 +105,7 @@ jobs:
 
       - name: Upload conformance report
         if: ${{ always() && matrix.full }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: conformance-report-${{ matrix.os }}
           path: conformance_report.json

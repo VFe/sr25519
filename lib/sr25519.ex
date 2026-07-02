@@ -3,7 +3,9 @@ defmodule Sr25519 do
   Substrate-compatible **sr25519 (schnorrkel) signature verification** for the BEAM.
 
   This is a thin, safety-critical [Rustler](https://hexdocs.pm/rustler) NIF over the
-  audited [w3f `schnorrkel`](https://github.com/w3f/schnorrkel) crate. It **verifies
+  [w3f `schnorrkel`](https://github.com/w3f/schnorrkel) crate (independently audited
+  *upstream*; this wrapper itself is human-reviewed, not independently audited — see
+  the project's SECURITY.md). It **verifies
   exact bytes** and nothing more: it never decodes, normalizes, or canonicalizes input
   (no hex, base64, SS58, SCALE, JSON, UTF-8, or `MultiSignature` tag handling). Every
   Substrate/Bittensor convention lives in a **named, vector-backed** module —
@@ -40,6 +42,13 @@ defmodule Sr25519 do
 
   Both `:error` and `{:ok, false}` fail closed — the distinction is for
   metrics/alerting, not control flow.
+
+  > #### Legacy signature format {: .info}
+  >
+  > Signatures from pre-0.8 schnorrkel (missing the `0x80` "schnorrkel-marked"
+  > bit in byte 63) parse-fail and return `{:ok, false}`, never an error. The
+  > deprecated legacy encoding (`preaudit_deprecated`) is deliberately not
+  > enabled; all modern Substrate/polkadot-js/subkey signatures carry the marker.
   """
 
   alias Sr25519.Native
@@ -55,21 +64,28 @@ defmodule Sr25519 do
   @typedoc "The result of a verification call."
   @type result :: {:ok, boolean} | {:error, error}
 
-  # Hard caps on what gets absorbed into the Merlin transcript. An unbounded
-  # binary could block the BEAM scheduler (Erlang's ~1 ms NIF guideline); the
-  # p99 < 1 ms gate is benchmarked at MAX_MESSAGE_BYTES, so the context gets its
-  # own (much smaller) cap rather than doubling the bound. Real signing contexts
-  # are short domain labels — Substrate's is 9 bytes. Both constants are
-  # mirrored in `native/sr25519_nif/src/lib.rs` and asserted equal by tests.
+  # Hard caps on what gets absorbed into the Merlin transcript. The NIF runs on
+  # a dirty CPU scheduler, so these bound the work a single call can demand (and
+  # keep the error contract stable) rather than protect regular schedulers; a
+  # p99 < 1 ms benchmark at MAX_MESSAGE_BYTES remains as a perf-regression gate.
+  # Real signing contexts are short domain labels — Substrate's is 9 bytes. Both
+  # constants are mirrored in `native/sr25519_nif/src/lib.rs` and asserted equal
+  # by tests.
   @max_message_bytes 65_536
   @max_context_bytes 1_024
+
+  # Mirrors SIGNATURE_BYTES / PUBLIC_KEY_BYTES in native/sr25519_nif/src/lib.rs.
+  # Checked here first so trivially invalid input never crosses the NIF boundary;
+  # the Rust checks remain the authoritative backstop for any direct-NIF path.
+  @signature_bytes 64
+  @public_key_bytes 32
 
   @doc """
   The maximum accepted `message` size, in bytes.
 
   Messages larger than this are rejected with `{:error, :message_too_large}` rather
-  than risking a scheduler-blocking NIF call. Realistic Substrate extrinsics and
-  Bittensor/Epistula payloads are far below this cap.
+  than absorbing unbounded input into the transcript. Realistic Substrate extrinsics
+  and Bittensor/Epistula payloads are far below this cap.
   """
   @spec max_message_bytes() :: pos_integer()
   def max_message_bytes, do: @max_message_bytes
@@ -106,9 +122,19 @@ defmodule Sr25519 do
       when is_binary(message) and is_binary(signature) and is_binary(public_key) and
              is_binary(context) do
     cond do
-      byte_size(message) > @max_message_bytes -> {:error, :message_too_large}
-      byte_size(context) > @max_context_bytes -> {:error, :context_too_large}
-      true -> Native.verify_raw(message, signature, public_key, context)
+      byte_size(message) > @max_message_bytes ->
+        {:error, :message_too_large}
+
+      byte_size(context) > @max_context_bytes ->
+        {:error, :context_too_large}
+
+      # Same precedence order as the Rust checks (caps, then lengths), so the
+      # observable contract is identical no matter which layer answers.
+      byte_size(signature) != @signature_bytes or byte_size(public_key) != @public_key_bytes ->
+        {:error, :invalid_length}
+
+      true ->
+        Native.verify_raw(message, signature, public_key, context)
     end
   end
 

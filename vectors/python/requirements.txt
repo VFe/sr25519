@@ -1,0 +1,9 @@
+# Pinned generator environment — for FUTURE vector regeneration only.
+#
+# The corpus under test/vectors/ is FROZEN; never regenerate it as routine
+# maintenance (see docs/CONFORMANCE.md). These pins are exactly the versions
+# that produced the frozen corpus, recorded in its own metadata
+# (test/vectors/substrate_interface.json: meta.tool_version and the per-vector
+# "backend" field), so a deliberate regeneration starts from the same signer.
+substrate-interface==1.8.1
+py-sr25519-bindings==0.2.4

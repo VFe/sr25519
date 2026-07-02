@@ -27,6 +27,20 @@ updates:
       interval: monthly
     labels: ["dependencies", "vector-generators"]
 
+  - package-ecosystem: cargo
+    directory: /vectors/rust_oracle
+    schedule:
+      interval: monthly
+    # The oracle pins schnorrkel exactly like the NIF; a bump here changes what
+    # future regenerated vectors attest, so it gets the same crypto-review label.
+    labels: ["dependencies", "vector-generators", "crypto-review-required"]
+
+  - package-ecosystem: pip
+    directory: /vectors/python
+    schedule:
+      interval: monthly
+    labels: ["dependencies", "vector-generators"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

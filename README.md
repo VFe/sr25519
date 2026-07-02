@@ -2,11 +2,14 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/sr25519.svg)](https://hex.pm/packages/sr25519)
 [![Docs](https://img.shields.io/badge/hexdocs-docs-purple.svg)](https://hexdocs.pm/sr25519)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/VFe/sr25519/badge)](https://scorecard.dev/viewer/?uri=github.com/VFe/sr25519)
 
 **Substrate-compatible sr25519 (schnorrkel) signature verification for the BEAM.**
 
-A thin, safety-critical [Rustler](https://hexdocs.pm/rustler) NIF over the audited
-[w3f `schnorrkel`](https://github.com/w3f/schnorrkel) crate. It fills a real gap:
+A thin, safety-critical [Rustler](https://hexdocs.pm/rustler) NIF over the
+[w3f `schnorrkel`](https://github.com/w3f/schnorrkel) crate — independently
+audited *upstream*; this wrapper itself is human-reviewed, not independently
+audited (see [SECURITY.md](SECURITY.md)). It fills a real gap:
 the BEAM ecosystem has had **no maintained sr25519/schnorrkel library**, which is
 what you need to verify Substrate / Polkadot / Bittensor signatures in-process from
 Elixir.
@@ -169,6 +172,12 @@ constructing the bytes you pass in — otherwise long extrinsics return
 Both `:error` and `{:ok, false}` fail closed — the distinction is for
 metrics/alerting, not control flow.
 
+> **Legacy-format note:** signatures from pre-0.8 schnorrkel (missing the
+> `0x80` "schnorrkel-marked" bit in byte 63 — e.g. keys signed by ancient
+> polkadot-js keyrings) parse-fail and return `{:ok, false}`, never an error.
+> The deprecated legacy encoding (`preaudit_deprecated`) is deliberately not
+> enabled; all modern Substrate/polkadot-js/subkey signatures carry the marker.
+
 ## Correctness & safety
 
 Correctness is defined by **real-world vectors**, not prose. The vector corpus in
@@ -195,14 +204,49 @@ Safety properties are enforced, not assumed:
 - `panic = "unwind"` in the release profile, so a NIF panic cannot abort the BEAM
   VM — proven by a deliberate-panic test run in a **separate OS process**, and
   guarded by a CI check that rejects `panic = "abort"`.
-- A `MAX_MESSAGE_BYTES` cap keeps verify a well-behaved regular NIF; a benchmark
-  gate asserts **p99 < 1 ms** at the cap.
+- Verification runs on a **dirty CPU scheduler**, so even cap-sized messages on
+  slow targets cannot starve the BEAM's regular schedulers; a `MAX_MESSAGE_BYTES`
+  cap bounds per-call work, and a benchmark gate asserts **p99 < 1 ms** at the
+  cap as a perf-regression bound.
 
 Run the whole ladder with one command:
 
 ```sh
 mix conformance   # L0–L7 + property & safety suites → conformance_report.json
 ```
+
+## Verifying release artifacts
+
+Precompiled NIFs involve a supply chain; here is exactly what protects it and
+how to check it yourself.
+
+**The trust chain.** Each release's NIF binaries are built by
+[`release.yml`](.github/workflows/release.yml) and signed with a GitHub
+[build-provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations).
+The Hex package embeds `checksum-Elixir.Sr25519.Native.exs`; at install time
+`rustler_precompiled` downloads the artifact for your platform and rejects it
+unless its SHA-256 matches that file. Before every publish, the
+[`release-verify.yml`](.github/workflows/release-verify.yml) workflow
+independently re-checks the release: committed checksums must equal the release
+assets (both directions), every asset's attestation must verify against this
+repo's release workflow, and the real download-verify-load install path must
+work on Linux/macOS/Windows.
+
+**Check an artifact yourself** (requires the [GitHub CLI](https://cli.github.com)):
+
+```sh
+gh release download vX.Y.Z --repo VFe/sr25519 --pattern '*.tar.gz' --dir assets
+gh attestation verify assets/<artifact>.tar.gz --repo VFe/sr25519 \
+  --signer-workflow VFe/sr25519/.github/workflows/release.yml
+```
+
+**Residual trust.** The checksum file binds your install to the attested bytes,
+and the attestation proves those bytes were built by this repository's release
+workflow at the tagged commit. What remains is the Hex tarball itself (hex.pm
+does not attest packages): it is published from the maintainer's machine, from
+the same commit `release-verify` validated. If you need stronger guarantees,
+build from source with `SR25519_FORCE_BUILD=1` — the package ships the full
+Rust source and the exact `Cargo.lock`.
 
 ## Versioning
 

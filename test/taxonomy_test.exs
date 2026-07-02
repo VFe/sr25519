@@ -124,6 +124,70 @@ defmodule Sr25519.TaxonomyTest do
   end
 
   @tag rung: :L3
+  test "the Rust length checks backstop the NIF even when the Elixir guard is bypassed" do
+    # The Elixir wrapper now rejects wrong lengths pre-NIF, so this direct call
+    # is the only path that keeps the Rust invalid_length branch covered.
+    assert Sr25519.Native.verify_raw("m", <<0::504>>, <<0::256>>, "substrate") ==
+             {:error, :invalid_length}
+
+    assert Sr25519.Native.verify_raw("m", <<0::512>>, <<0::248>>, "substrate") ==
+             {:error, :invalid_length}
+  end
+
+  @tag rung: :L3
+  test "a huge (1 MiB) signature or public key -> {:error, :invalid_length}, cheaply" do
+    huge = :binary.copy(<<0>>, 1_048_576)
+
+    assert Sr25519.verify_raw("m", huge, <<0::256>>, "substrate") == {:error, :invalid_length}
+    assert Sr25519.verify_raw("m", <<0::512>>, huge, "substrate") == {:error, :invalid_length}
+
+    # Even straight into the NIF: BEAM binaries cross by reference and the
+    # length check is O(1), so an oversized sig/pk costs no hashing or copying.
+    assert Sr25519.Native.verify_raw("m", huge, <<0::256>>, "substrate") ==
+             {:error, :invalid_length}
+
+    assert Sr25519.Native.verify_raw("m", <<0::512>>, huge, "substrate") ==
+             {:error, :invalid_length}
+  end
+
+  @tag rung: :L3
+  test "Substrate variants return {:error, :invalid_type} for non-binary arguments" do
+    for bad <- [123, [1, 2, 3], nil, :atom, %{}, 1.5] do
+      assert Sr25519.Substrate.verify_raw_message(bad, <<0::512>>, <<0::256>>) ==
+               {:error, :invalid_type}
+
+      assert Sr25519.Substrate.verify_raw_message("m", bad, <<0::256>>) ==
+               {:error, :invalid_type}
+
+      assert Sr25519.Substrate.verify_raw_message("m", <<0::512>>, bad) ==
+               {:error, :invalid_type}
+
+      assert Sr25519.Substrate.verify_wrapped_bytes(bad, <<0::512>>, <<0::256>>) ==
+               {:error, :invalid_type}
+
+      assert Sr25519.Substrate.verify_wrapped_bytes("m", bad, <<0::256>>) ==
+               {:error, :invalid_type}
+
+      assert Sr25519.Substrate.verify_wrapped_bytes("m", <<0::512>>, bad) ==
+               {:error, :invalid_type}
+    end
+  end
+
+  @tag rung: :L3
+  test "the raw NIF raises ArgumentError on non-binary arguments" do
+    # The typed {:error, :invalid_type} contract lives in the Elixir wrapper;
+    # rustler's Binary decode raises badarg. This pins that boundary behavior
+    # so a rustler upgrade can't change it unnoticed.
+    assert_raise ArgumentError, fn ->
+      Sr25519.Native.verify_raw(123, <<0::512>>, <<0::256>>, "substrate")
+    end
+
+    assert_raise ArgumentError, fn ->
+      Sr25519.Native.verify_raw("m", <<0::512>>, <<0::256>>, :ctx)
+    end
+  end
+
+  @tag rung: :L3
   test "the corpus spec cap matches the library constant" do
     assert Sr25519.Vectors.spec()["max_message_bytes"] == Sr25519.max_message_bytes()
   end

@@ -1,0 +1,113 @@
+name: Release verify
+
+# Verifies a release AFTER the maintainer commits the checksum file and BEFORE
+# `mix hex.publish` (see RELEASING.md). Three independent checks:
+#
+#   1. the committed checksum file matches the GitHub release assets exactly
+#      (same file set, same SHA-256s) — a swapped/added/missing artifact fails;
+#   2. every asset carries a build-provenance attestation signed by THIS repo's
+#      release.yml — a binary built anywhere else fails;
+#   3. the real consumer install path works on all three OS families:
+#      precompiled download + checksum verification + NIF load + known-answer
+#      verifies (regular CI always force-builds, so nothing else covers this).
+#
+# Deliberately NOT `on: release`: releases created with the workflow's
+# GITHUB_TOKEN (softprops/action-gh-release) never fire `release:` triggers, so
+# this keys off the checksum-file commit instead — the exact moment the
+# release becomes consumable.
+on:
+  push:
+    branches: [main]
+    paths: ["checksum-Elixir.Sr25519.Native.exs"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-assets:
+    name: checksums + attestations vs GitHub release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # `gh attestation verify` reads from the attestations API (needed if the
+      # repository is ever private; harmless while public).
+      attestations: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Require the committed checksum file
+        run: |
+          if [ ! -f checksum-Elixir.Sr25519.Native.exs ]; then
+            echo "::error::checksum-Elixir.Sr25519.Native.exs is not in the tree. It only exists between 'mix rustler_precompiled.download --all' (RELEASING.md) and hex publish — run this workflow from that commit."
+            exit 1
+          fi
+
+      - name: Extract release version from mix.exs
+        run: |
+          V="$(sed -n 's/^  @version "\(.*\)"/\1/p' mix.exs | head -n1)"
+          if [ -z "$V" ]; then
+            echo "::error::could not extract @version from mix.exs"; exit 1
+          fi
+          echo "PROJECT_VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: Download all release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v${PROJECT_VERSION}" \
+            --repo "$GITHUB_REPOSITORY" --pattern '*.tar.gz' --dir assets
+
+      - name: Set up Elixir/OTP
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: "26.2"
+          elixir-version: "1.16.3"
+
+      - name: Committed checksums == release assets (set equality + SHA-256)
+        run: elixir .github/scripts/verify_checksums.exs assets
+
+      - name: Verify build provenance on every asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for f in assets/*; do
+            gh attestation verify "$f" --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
+          done
+
+  consumer-install:
+    name: real consumer path (${{ matrix.os }})
+    needs: verify-assets
+    strategy:
+      fail-fast: false
+      matrix:
+        # x86_64-unknown-linux-gnu / aarch64-apple-darwin / x86_64-pc-windows-msvc
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Elixir/OTP
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: "26.2"
+          elixir-version: "1.16.3"
+
+      # SR25519_FORCE_BUILD is deliberately UNSET and no Rust toolchain is
+      # installed: compiling the test env takes rustler_precompiled's download +
+      # checksum-verify + dlopen path, then the taxonomy suite runs known-answer
+      # verifies through the downloaded NIF.
+      - name: Install deps and verify through the downloaded NIF
+        shell: bash
+        run: |
+          mix deps.get
+          mix test test/taxonomy_test.exs
