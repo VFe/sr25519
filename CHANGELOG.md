@@ -9,6 +9,20 @@ as potentially breaking and versioned deliberately.
 
 ## [Unreleased]
 
+### Added
+- Supply-chain hardening from the first OpenSSF Scorecard run:
+  - Releases now attach each artifact's Sigstore provenance bundle as
+    `<artifact>.sigstore.json` (offline `gh attestation verify --bundle`;
+    also retro-attached to v0.1.0). Release asset uploads no longer overwrite
+    existing assets (`overwrite_files: false`).
+  - Hex publishing moved into CI: a dispatch-only, reviewer-gated
+    `publish.yml` with a dry-run default and gates that enforce the
+    RELEASING.md ordering invariants (tag exists, `Release verify` green for
+    the exact commit, tarball contents asserted).
+  - CodeQL analysis (Rust + GitHub Actions) on every PR, push to `main`, and
+    weekly.
+  - `CONTRIBUTING.md`.
+
 ## [0.1.0] - 2026-07-02
 
 The first public release: the verification-only core, plus a pre-publish

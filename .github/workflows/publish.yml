@@ -1,0 +1,113 @@
+name: Publish to Hex
+
+# Publishes the Hex package from CI — RELEASING.md step 4. Dispatch-only, and
+# the job targets the `release` environment, so a human must approve every run
+# and only approved runs can read HEX_API_KEY. The default mode is a dry run;
+# publishing requires explicitly selecting mode=publish at dispatch time.
+#
+# The gates re-assert the RELEASING.md ordering invariants in the pipeline
+# itself: artifacts exist for this exact version, the committed checksums were
+# independently verified against them (Release verify green for THIS commit),
+# and the tarball carries the checksum file + Cargo.lock.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run builds and checks only; publish pushes to hex.pm"
+        type: choice
+        options: [dry-run, publish]
+        default: dry-run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: hex.publish (${{ inputs.mode }})
+    runs-on: ubuntu-latest
+    # Required-reviewer gate + scope of the HEX_API_KEY environment secret.
+    environment: release
+    permissions:
+      contents: read
+      # gate 3 reads this repo's workflow-run history
+      actions: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      # DO NOT rename to erlef/setup-beam. The OpenSSF Scorecard Packaging
+      # check matches the literal prefix "erlef/setup-elixir@" (setup-beam does
+      # NOT match). GitHub redirects the old name to the renamed repo, so this
+      # SHA is the same setup-beam commit the other workflows pin. dependabot
+      # ignores this dependency (see dependabot.yml) — refresh the SHA manually
+      # from the setup-beam bumps it opens for ci.yml/audit.yml/release-verify.yml.
+      # audit.yml greps for this exact name; renaming it fails the Audit check.
+      - name: Set up Elixir/OTP
+        uses: erlef/setup-elixir@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: "26.2"
+          elixir-version: "1.16.3"
+
+      # No dependency cache on purpose: a poisoned cache entry must never feed
+      # a publish. deps.get also fetches ex_doc (:docs env) — mix.exs routes
+      # hex.publish through :docs, and compiling there re-exercises the real
+      # consumer path (precompiled download + checksum verify, no Rust needed).
+      - name: Fetch deps
+        run: mix deps.get
+
+      - name: "Gate 1: committed checksum file present"
+        run: |
+          if [ ! -f checksum-Elixir.Sr25519.Native.exs ]; then
+            echo "::error::checksum-Elixir.Sr25519.Native.exs missing — run RELEASING.md step 2 first"; exit 1
+          fi
+
+      - name: "Gate 2: version extractable and release tag exists"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="$(sed -n 's/^  @version "\(.*\)"/\1/p' mix.exs | head -n1)"
+          if [ -z "$V" ]; then
+            echo "::error::could not extract @version from mix.exs"; exit 1
+          fi
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${V}" > /dev/null; then
+            echo "::error::tag v${V} does not exist — publish only released versions"; exit 1
+          fi
+          echo "PROJECT_VERSION=$V" >> "$GITHUB_ENV"
+
+      # "Never publish while Release verify is red or has not run" — enforced.
+      # If HEAD moved past the checksum commit (normal after doc-only pushes),
+      # dispatch Release verify on current main first; it re-checks the live
+      # release assets against the committed checksums.
+      - name: "Gate 3: Release verify succeeded for this exact commit"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n="$(gh run list --workflow release-verify.yml --commit "$GITHUB_SHA" \
+                --status success --json databaseId --jq 'length')"
+          if [ "$n" -lt 1 ]; then
+            echo "::error::no successful 'Release verify' run for $GITHUB_SHA — dispatch it on this commit first"; exit 1
+          fi
+
+      - name: "Gate 4: tarball carries checksums, native sources, lockfile"
+        run: |
+          mix hex.build --unpack -o "$RUNNER_TEMP/pkg"
+          for f in checksum-Elixir.Sr25519.Native.exs native/sr25519_nif/Cargo.lock native/sr25519_nif/src/lib.rs; do
+            if [ ! -f "$RUNNER_TEMP/pkg/$f" ]; then
+              echo "::error::$f missing from the Hex tarball"; exit 1
+            fi
+          done
+
+      - name: Publish (builds HexDocs in the :docs env)
+        if: inputs.mode == 'publish'
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+        run: mix hex.publish --yes
+
+      - name: Dry run (build + local checks, nothing published)
+        if: inputs.mode == 'dry-run'
+        run: mix hex.publish --dry-run

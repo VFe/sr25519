@@ -252,11 +252,17 @@ gh attestation verify assets/<artifact>.tar.gz --repo VFe/sr25519 \
   --signer-workflow VFe/sr25519/.github/workflows/release.yml
 ```
 
+Each release also attaches every artifact's Sigstore bundle as
+`<artifact>.sigstore.json`, so the same check works without calling the
+attestations API (offline/air-gapped verification): add
+`--bundle assets/<artifact>.tar.gz.sigstore.json`.
+
 **Residual trust.** The checksum file binds your install to the attested bytes,
 and the attestation proves those bytes were built by this repository's release
 workflow at the tagged commit. What remains is the Hex tarball itself (hex.pm
-does not attest packages): it is published from the maintainer's machine, from
-the same commit `release-verify` validated. If you need stronger guarantees,
+does not attest packages): it is published by the reviewer-gated
+[`publish.yml`](.github/workflows/publish.yml) workflow, from the same commit
+`release-verify` validated. If you need stronger guarantees,
 build from source with `SR25519_FORCE_BUILD=1` — the package ships the full
 Rust source and the exact `Cargo.lock`.
 

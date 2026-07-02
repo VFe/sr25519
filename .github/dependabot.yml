@@ -46,3 +46,10 @@ updates:
     schedule:
       interval: weekly
     labels: ["dependencies", "ci"]
+    ignore:
+      # publish.yml must keep the literal name erlef/setup-elixir (the OpenSSF
+      # Scorecard Packaging matcher; the name redirects to erlef/setup-beam).
+      # An update PR could rewrite it to the redirect target, so bump this SHA
+      # manually, copying from the setup-beam bumps dependabot opens for the
+      # other workflows (same repo, same commits). audit.yml enforces the name.
+      - dependency-name: erlef/setup-elixir

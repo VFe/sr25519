@@ -80,3 +80,9 @@ jobs:
         run: |
           pipx install zizmor==1.26.1
           zizmor --min-severity medium .github/workflows/
+      # The literal action name is load-bearing: the OpenSSF Scorecard
+      # Packaging matcher only recognizes "erlef/setup-elixir@", not the
+      # renamed erlef/setup-beam it redirects to (see publish.yml).
+      - name: publish.yml must keep the erlef/setup-elixir name
+        run: |
+          grep -q 'uses: erlef/setup-elixir@' .github/workflows/publish.yml

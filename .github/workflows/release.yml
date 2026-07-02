@@ -1,9 +1,10 @@
 name: Build precompiled NIFs
 
 # Builds a precompiled NIF for every rustler_precompiled target and attaches it to
-# the GitHub release. After all artifacts exist, generate the checksum file locally
-# with `mix rustler_precompiled.download Sr25519.Native --all --print`, commit it,
-# then `mix hex.build --unpack` (L7) and `mix hex.publish`.
+# the GitHub release together with its signed build-provenance bundle
+# (<artifact>.sigstore.json). After all artifacts exist, generate the checksum file
+# locally with `mix rustler_precompiled.download Sr25519.Native --all --print`,
+# commit it, then publish via the "Publish to Hex" workflow (publish.yml).
 on:
   push:
     tags: ["v*"]
@@ -83,12 +84,32 @@ jobs:
       # each precompiled NIF was built by this workflow from this commit via
       # `gh attestation verify <artifact> --repo VFe/sr25519`.
       - name: Attest build provenance
+        id: attest
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-path: ${{ steps.build-crate.outputs.file-path }}
 
-      - name: Attach artifact to the release
+      # The attestation lives in GitHub's attestations API, which external
+      # scanners (e.g. the OpenSSF Scorecard Signed-Releases check) never read
+      # — so the same Sigstore bundle is also attached as a release asset,
+      # named after its artifact. Enables fully offline verification:
+      # `gh attestation verify <artifact> -R VFe/sr25519 --bundle <artifact>.sigstore.json`.
+      - name: Name the attestation bundle after its artifact
+        shell: bash
+        env:
+          BUNDLE_PATH: ${{ steps.attest.outputs.bundle-path }}
+          ARTIFACT_PATH: ${{ steps.build-crate.outputs.file-path }}
+        run: cp "$BUNDLE_PATH" "${ARTIFACT_PATH}.sigstore.json"
+
+      - name: Attach artifact and provenance bundle to the release
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ${{ steps.build-crate.outputs.file-path }}
+          files: |
+            ${{ steps.build-crate.outputs.file-path }}
+            ${{ steps.build-crate.outputs.file-path }}.sigstore.json
+          # Published checksums pin these assets: a re-run of a completed tag
+          # build must fail loudly rather than silently replace them. Recover
+          # from a half-uploaded job by deleting that job's assets in the UI,
+          # never by re-running a fully published build.
+          overwrite_files: false
