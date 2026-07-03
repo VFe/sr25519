@@ -108,6 +108,13 @@ jobs:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
         run: mix hex.publish --yes
 
-      - name: Dry run (build + local checks, nothing published)
+      # Not `mix hex.publish --dry-run`: hex authenticates BEFORE the dry-run
+      # short-circuit, so that still demands HEX_API_KEY. The rehearsal instead
+      # builds exactly what a publish would push — the package tarball and the
+      # HexDocs — with no credentials in scope. (Scorecard's Packaging matcher
+      # keys on the publish step's run text above, present regardless of mode.)
+      - name: Dry run (build package + docs, nothing published)
         if: inputs.mode == 'dry-run'
-        run: mix hex.publish --dry-run
+        run: |
+          mix hex.build
+          mix docs
