@@ -1,0 +1,53 @@
+name: CodeQL
+
+# SAST over the two CodeQL-supported surfaces of this repo: the Rust NIF
+# (the security-critical code) and the GitHub Actions workflows. Elixir has
+# no CodeQL support; it is covered by dialyzer in ci.yml instead.
+#
+# Runs on every PR with no path filters on purpose: each PR commit must
+# receive a github-code-scanning check run (that per-commit coverage is also
+# what the OpenSSF Scorecard SAST check measures).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 7 * * 1" # weekly, Monday 07:00 UTC (after audit 06:00, scorecard 06:30)
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # upload SARIF results to the code scanning dashboard
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Rust supports only build-mode none (extraction via rust-analyzer;
+          # it discovers native/sr25519_nif and vectors/rust_oracle without a
+          # workspace manifest at the repo root).
+          - language: rust
+            build-mode: none
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          category: "/language:${{ matrix.language }}"

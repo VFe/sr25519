@@ -57,6 +57,9 @@ jobs:
           fi
           echo "PROJECT_VERSION=$V" >> "$GITHUB_ENV"
 
+      # The '*.tar.gz' pattern is deliberate: it selects exactly the artifacts
+      # the checksum file covers and excludes the <artifact>.sigstore.json
+      # provenance bundles release.yml attaches alongside them.
       - name: Download all release assets
         env:
           GH_TOKEN: ${{ github.token }}

@@ -26,9 +26,11 @@ git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
 `release.yml` verifies the tag matches `mix.exs` `@version`, then builds the NIF
-for every target in `Sr25519.Native`'s pinned target list and attaches the
-artifacts to the GitHub release. Wait for **all matrix jobs** to succeed —
-a missing target becomes a consumer-facing download failure.
+for every target in `Sr25519.Native`'s pinned target list and attaches **two
+assets per target** to the GitHub release: the artifact and its signed
+build-provenance bundle (`<artifact>.sigstore.json`, for offline
+`gh attestation verify --bundle` and external scanners). Wait for **all matrix
+jobs** to succeed — a missing target becomes a consumer-facing download failure.
 
 ## 2. Generate and commit the checksum file
 
@@ -68,16 +70,30 @@ which must be **green before publishing**. It independently proves:
 If it fails, fix the release first (usually: regenerate checksums from the
 actual assets, or rebuild a missing target) — never publish around it.
 
-## 4. Sanity-check the tarball, then publish
+Note: the publish gate below requires a green `Release verify` run **for the
+exact commit being published**. If anything landed on `main` after the checksum
+commit (doc-only pushes are normal), dispatch `Release verify` manually on
+current HEAD first — it re-checks the live release assets against the committed
+checksums, so it is equally valid on any descendant commit.
 
-```sh
-mix hex.build --unpack -o /tmp/sr25519_pkg   # inspect: checksum file, native/, Cargo.lock
-mix hex.publish                              # runs in the :docs env; builds HexDocs
-```
+## 4. Publish via the "Publish to Hex" workflow
 
-`mix hex.publish` requires a hex.pm account with ownership of the `sr25519`
-package (first publish claims the name) — `mix hex.user register` /
-`mix hex.user auth`.
+Actions → **Publish to Hex** → Run workflow → `mode: dry-run`, approve the
+`release` environment prompt, and let it run green once. Then dispatch again
+with `mode: publish` (and approve again). The workflow enforces the gates this
+file used to delegate to discipline: checksum file committed, tag exists for
+`@version`, `Release verify` green for the exact dispatched commit, and the
+tarball carries the checksum file + native sources + `Cargo.lock`. Publishing
+runs in the `:docs` env and builds HexDocs, exactly like a local
+`mix hex.publish`.
+
+Optional local inspection (the workflow re-asserts the important parts as
+gate 4): `mix hex.build --unpack -o /tmp/sr25519_pkg`.
+
+Publishing authenticates with the `HEX_API_KEY` environment secret — a
+package-scoped hex.pm key, see "Required repository settings" below. (hex ≥ 2.4
+switched the CLI to an OAuth device flow and removed CLI key generation; keys
+are created on the hex.pm dashboard.)
 
 ## 5. Post-publish verification
 
@@ -110,14 +126,29 @@ other half lives in GitHub/hex.pm settings and must be configured by hand:
 - [ ] **Private vulnerability reporting** enabled (Settings → Security), so
       reports can arrive via GitHub as well as the SECURITY.md email.
 - [ ] **hex.pm 2FA** enabled for every owner of the `sr25519` package.
+- [ ] **`HEX_API_KEY` as an *environment* secret on `release`** (never a
+      repo-level secret — only reviewer-approved jobs may read it). Generate on
+      <https://hex.pm/dashboard/keys> with write permission scoped to the
+      `sr25519` package (shows as `PKG:sr25519`; authorizes release + docs
+      publish for this package only).
+- [ ] Optional hardening: restrict the `release` environment's deployment
+      branches/tags to `main` and `v*`.
 - [ ] The `dtolnay/rust-toolchain` action is SHA-pinned to `master` (it has no
       semver tags), which dependabot will not refresh from a branch comment —
       re-resolve that pin occasionally.
+- [ ] `publish.yml` pins `erlef/setup-elixir` (the pre-rename alias of
+      `erlef/setup-beam`; the literal name is load-bearing for the OpenSSF
+      Scorecard Packaging check and enforced by audit.yml). dependabot ignores
+      it — refresh its SHA by hand from the setup-beam bumps in the other
+      workflows.
 
 ## Never
 
 - Never publish with a checksum file that wasn't regenerated from this
   release's artifacts.
 - Never publish while `Release verify` is red or has not run.
+- Never re-run `release.yml` jobs of an already-published version — published
+  checksums pin those assets (`overwrite_files: false` makes the attempt fail
+  loudly; recover by deleting the specific bad asset, not by re-running).
 - Never auto-merge or fast-track a `schnorrkel`/`rustler` bump.
 - Never weaken a compatibility vector to make a release pass.
